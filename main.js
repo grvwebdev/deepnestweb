@@ -15,7 +15,9 @@ app.use(fileUpload());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-const uuidv4 = require('uuid/v4'); 
+// const uuidv4 = require('uuid/v4'); 
+var uuid = require('uuid');
+
 const port = process.env.PORT || 3100;
 const addon = require('./minkowski/Release/addon');
 // const addon = require('./build2/Release/addon');
@@ -69,7 +71,7 @@ app.post('/calculatenfp', function(req, res) {
 });
 
 app.post('/writefile', function(req, res) {
-	var fileName = uuidv4();
+	var fileName = uuid.v4();
 	
 	if(req.body.type=='svg'){
 		fileName = fileName+'.svg';
@@ -235,8 +237,8 @@ function processFile(file){
 function readFile(file){
 	
 	var ext = path.extname(file.name);
-	var filename = uuidv4();
-	filename =  uuidv4()+ext;
+	var filename = uuid.v4();
+	filename =  uuid.v4()+ext;
 	filename =  file.name;
 	filePath = __dirname+'/files/'+filename;
 	fileStr = file.data.toString('utf8');
