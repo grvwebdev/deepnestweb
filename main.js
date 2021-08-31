@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 const uuidv4 = require('uuid/v4'); 
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3100;
 const addon = require('./minkowski/Release/addon');
 // const addon = require('./build2/Release/addon');
 
@@ -257,4 +257,4 @@ function readFile(file){
 };
 
 app.listen(port);
-console.log('Server started at http://localhost:' + port);
+console.log('Server started at http://52.4.107.14:' + port);
