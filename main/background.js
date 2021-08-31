@@ -641,9 +641,24 @@ function getOuterNfp(A, B, inside){
 
 	// not found in cache
 	if(inside || (A.children && A.children.length > 0)){
-	//console.log('computing minkowski: ',A.length, B.length);
+	console.log('computing minkowski: ',A.length, B.length);
 	//console.time('addon');
-	nfp = addon.calculateNFP({A: A, B: B});
+	// const wasm = await fetch('/calculatenfp');
+
+	var _params = {A: A, B: B};
+
+		fetch("/calculatenfp", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json; charset=utf-8"
+			},
+			body: JSON.stringify(_params )
+		}).then(function (response) {
+			return response.json();
+		}).then(function (result) {
+			console.log(result);
+		});
+	// nfp = addon.calculateNFP({A: A, B: B});
 	//console.timeEnd('addon');
 	}
 	else{

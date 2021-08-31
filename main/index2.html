@@ -553,23 +553,25 @@
 			// var app = electron.remote; 
 			// var fs = require('fs');
 			
+			var importbutton = document.querySelector('#import');
+
 			fileinput.onchange = function(e){
 				importfiles = document.querySelector('#importfiles');
 				// importfiles.submit();
 				var fd = new FormData();
 				// fd.append('importFiles', e.target.files[0], e.target.files[1], e.target.files[2] /*, optional filename */)
-
 				var ins = e.target.files.length;
 				for (var x = 0; x < ins; x++) {
 					fd.append("importFiles", e.target.files[x]);
 				}
-
+				importbutton.className = 'button import  spinner';
 
 				var req = fetch('/import', {
 					method: 'post',
 					body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
 				.then(function(data){ 
+					importbutton.className = 'button import';
 					if(Array.isArray(data)){
 						for(var i = 0; i<data.length; i++){
 							importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor);
@@ -590,9 +592,10 @@
 				// })
 			}
 
-			var importbutton = document.querySelector('#import');
+			
 			importbutton.onclick = function(){
 				if(importbutton.className == 'button import disabled' || importbutton.className == 'button import spinner'){
+					importbutton.className = 'button import disabled spinner';
 					return false;
 				}
 				
@@ -773,8 +776,8 @@
 					return false;
 				}
 				
-				var units = config.getSync('units');
-				var conversion = config.getSync('scale');
+				var units = defaultconfig.units;
+				var conversion = defaultconfig.scale;
 				
 				// remember, scale is stored in units/inch
 				if(units == 'mm'){
@@ -1025,12 +1028,13 @@
 			var exportsvg = document.querySelector('#exportsvg');
 			exportsvg.onclick = function(){
 				
-				var dialog = app.dialog;
-				dialog.showSaveDialog({title: 'Export Deepnest SVG'}, function (fileName) {
-					if(fileName === undefined){
-						console.log("No file selected");
-					}
-					else{
+				// var dialog = app.dialog;
+				// dialog.showSaveDialog({title: 'Export Deepnest SVG'}, function (fileName) {
+					// if(fileName === undefined){
+					// 	console.log("No file selected");
+					// }
+					// else{
+						var fileName = new Date().valueOf() + '.svg';
 						var selected = DeepNest.nests.filter(function(n){
 							return n.selected;
 						});
@@ -1038,20 +1042,42 @@
 						if(selected.length == 0){
 							return false;
 						}
-						
-						fs.writeFileSync(fileName, exportNest(selected.pop()));
-					}
-				});
-			};
+						exportbutton.className = 'button export spinner';
+						var fileData = exportNest(selected.pop());
+						var myHeaders = new Headers();
+						myHeaders.append('Content-Type', 'text/html');
+						fetch('/writefile',{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json; charset=utf-8"
+							},
+							body: JSON.stringify({filedata:fileData,type:'svg'}, null, 2 )
+						}).then(function(response) {
+							exportbutton.className = 'button export';
+							response.json().then(function(text) {
+								// console.log(text.url);
+								var link = document.createElement("a");
+								link.href = text.url;
+								link.download = text.filename;
+								document.body.appendChild(link);
+								link.click();
+								document.body.removeChild(link);
+							})
+						}).catch(function(err) {
+							exportbutton.className = 'button export';
+							console.log(err)
+						});
+					
+						};
 			
 			var exportdxf = document.querySelector('#exportdxf');
 			exportdxf.onclick = function(){
-				var dialog = app.dialog;
-				dialog.showSaveDialog({title: 'Export Deepnest DXF'}, function (fileName) {
-					if(fileName === undefined){
-						console.log("No file selected");
-					}
-					else{
+				// var dialog = app.dialog;
+				// dialog.showSaveDialog({title: 'Export Deepnest DXF'}, function (fileName) {
+					// if(fileName === undefined){
+					// 	console.log("No file selected");
+					// }
+					// else{
 						var selected = DeepNest.nests.filter(function(n){
 							return n.selected;
 						});
@@ -1060,35 +1086,39 @@
 							return false;
 						}
 						// send to conversion server
-						var url = config.getSync('conversionServer');
-						if(!url){
+						// var url = config.getSync('conversionServer');
+						// if(!url){
 							url = defaultConversionServer;
-						}
+						// }
 						
-						exportbutton.className = 'button export spinner';
-						
-						var req = request.post(url, function (err, resp, body) {
-							exportbutton.className = 'button export';
-							if (err) {
-								message('could not contact file conversion server', true);
-							} else {
-								if(body.substring(0, 5) == 'error'){
-									message(body, true);
-								}
-								else{
-									fs.writeFileSync(fileName, body);
-								}
-							}
-						});
 
-						var form = req.form();
-						form.append('format', 'dxf');
-						form.append('fileUpload', exportNest(selected.pop(), true), {
-						  filename: 'deepnest.svg',
-						  contentType: 'image/svg+xml'
+						exportbutton.className = 'button export spinner';
+						var fileData = exportNest(selected.pop(), true);
+						var myHeaders = new Headers();
+						myHeaders.append('Content-Type', 'text/html');
+						fetch('/writefile',{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json; charset=utf-8"
+							},
+							body: JSON.stringify({filedata:fileData, type:'dxf'}, null, 2 )
+						}).then(function(response) {
+							exportbutton.className = 'button export';
+							response.json().then(function(text) {
+								// console.log(text.url);
+								var link = document.createElement("a");
+								link.href = text.url;
+								link.download = text.filename;
+								document.body.appendChild(link);
+								link.click();
+								document.body.removeChild(link);
+							})
+						}).catch(function(err) {
+							exportbutton.className = 'button export';
+							console.log(err)
 						});
-					}
-				});
+					// }
+				// });
 			};
 			/*
 			var exportgcode = document.querySelector('#exportgcode');
@@ -1192,13 +1222,13 @@
 					svgheight += 1.1*sheetbounds.height;
 				});
 				
-				var scale = config.getSync('scale');
-				
+				var scale = defaultconfig.scale;
+				console.log(scale);
 				if(dxf){
-					scale /= Number(config.getSync('dxfExportScale')); // inkscape on server side
+					scale /= Number(defaultconfig.dxfExportScale); // inkscape on server side
 				}
 				
-				var units = config.getSync('units');
+				var units = defaultconfig.units;
 				if(units == 'mm'){
 					scale /= 25.4;
 				}
@@ -1207,11 +1237,11 @@
 				svg.setAttribute('height', (svgheight/scale) + (units == 'inch' ? 'in' : 'mm'));
 				svg.setAttribute('viewBox', '0 0 '+svgwidth+' '+svgheight);
 				
-				if(config.getSync('mergeLines') && n.mergedLength > 0){
+				if(defaultconfig.mergeLines && n.mergedLength > 0){
 					SvgParser.applyTransform(svg);
 					SvgParser.flatten(svg);
 					SvgParser.splitLines(svg);
-					SvgParser.mergeOverlap(svg, 0.1*config.getSync('curveTolerance'));
+					SvgParser.mergeOverlap(svg, 0.1*defaultconfig.curveTolerance);
 					SvgParser.mergeLines(svg);
 					
 					// set stroke and fill for all
@@ -1472,26 +1502,8 @@
 			
 			window.loginWindow = null;
 		});
+
 		
-		// ipcRenderer.on('background-progress', (event, p) => {
-		// 	/*var bar = document.querySelector('#progress'+p.index);
-		// 	if(p.progress < 0 && bar){
-		// 		// negative progress = finish
-		// 		bar.className = 'progress';
-		// 		bar.removeAttribute('id');
-		// 		return;
-		// 	}
-			
-		// 	if(!bar){
-		// 		bar = document.querySelector('li.progress:not(.active)');
-		// 		bar.setAttribute('id', 'progress'+p.index);
-		// 		bar.className = 'progress active';
-		// 	}
-			
-		// 	bar.querySelector('.bar').setAttribute('style', 'stroke-dashoffset: ' + parseInt((1-p.progress)*111));*/
-		// 	var bar = document.querySelector('#progressbar');
-		// 	bar.setAttribute('style', 'width: '+parseInt(p.progress*100)+'%'+(p.progress < 0.01 ? '; transition: none' : ''));
-		// });
 		
 		function message(txt, error){
 			var message = document.querySelector('#message');
@@ -2992,7 +3004,8 @@
 		</div>
 	</div>
 	<form action="import" method="post" enctype="multipart/form-data" id="importfiles">
-		<input id="fileinput" type="file" style="visibility:hidden" multiple accept=".svg, .dxf" />
+		<input id="fileinput" type="file" style="visibility:hidden" multiple accept=".svg" />
+		<!-- .svg, .dxf -->
 	</form>
 	</body>
 </html>

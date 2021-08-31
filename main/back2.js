@@ -6,9 +6,6 @@ importScripts('util/parallel.js');
 importScripts('util/parallel.js');
 importScripts('add.js');
 
-
-
-
 // fetch("add.wasm").then(response => 
 // 	console.log(response)
 //   ).then(bytes =>
@@ -284,7 +281,7 @@ onmessage = function(e){
       }
       
       // run the placement synchronously
-      function sync(){
+      async function sync(){
           //console.log('starting synchronous calculations', Object.keys(window.nfpCache).length);
           console.log('in sync');
           var c=0;
@@ -292,9 +289,9 @@ onmessage = function(e){
             c++;
         }
         console.log('nfp cached:', c);
-        var placement = placeParts(data.sheets, parts, data.config, index);
-	
+        var placement = await placeParts(data.sheets, parts, data.config, index);
         placement.index = data.index;
+		console.log(placement);
 		// console.log('background-response');
         // ipcRenderer.send('background-response', placement);
 		var psmsgData = {process:'background-response', placement}
@@ -659,7 +656,7 @@ function rotatePolygon(polygon, degrees){
 	return rotated;
 };
 
-function getOuterNfp(A, B, inside){
+async function getOuterNfp(A, B, inside){
 	var nfp;
 	
 	/*var numpoly = A.length + B.length;
@@ -689,7 +686,11 @@ function getOuterNfp(A, B, inside){
 	// nfp = ClipperLib.JS.calculateNFP({A: A, B: B});
 	//console.timeEnd('addon');
 	// console.log(A.children);
-		nfp = GeometryUtil.noFitPolygonRectangle(A,B);
+		// nfp = GeometryUtil.noFitPolygonRectangle(A,B);
+		var _params = {A: A, B: B};
+		console.log('parameters', _params);
+		var resp = await getJSON(_params);
+		nfp = resp;
 	}
 	else{
 		// console.log('minkowski', A.length, B.length, A.source, B.source);
@@ -777,7 +778,7 @@ function getFrame(A){
 	return frame;
 }
 
-function getInnerNfp(A, B, config){
+async function getInnerNfp(A, B, config){
 	if(typeof A.source !== 'undefined' && typeof B.source !== 'undefined'){
 		var doc = window.db.find({ A: A.source, B: B.source, Arotation: 0, Brotation: B.rotation }, true);
 	
@@ -789,7 +790,7 @@ function getInnerNfp(A, B, config){
 	
 	var frame = getFrame(A);
 	
-	var nfp = getOuterNfp(frame, B, true);
+	var nfp = await getOuterNfp(frame, B, true);
 		
 	if(!nfp || !nfp.children || nfp.children.length == 0){
 		return null;
@@ -798,7 +799,7 @@ function getInnerNfp(A, B, config){
 	var holes = [];
 	if(A.children && A.children.length > 0){
 		for(var i=0; i<A.children.length; i++){
-			var hnfp = getOuterNfp(A.children[i], B);
+			var hnfp = await getOuterNfp(A.children[i], B);
 			if(hnfp){
 				holes.push(hnfp);
 			}
@@ -825,7 +826,7 @@ function getInnerNfp(A, B, config){
 	if(finalNfp.length == 0){
 		return null;
 	}
-	
+
 	var f = [];
 	for(var i=0; i<finalNfp.length; i++){
 		f.push(toNestCoordinates(finalNfp[i], config.clipperScale));
@@ -847,7 +848,7 @@ function getInnerNfp(A, B, config){
 	return f;
 }
 
-function placeParts(sheets, parts, config, nestindex){
+async function placeParts(sheets, parts, config, nestindex){
 
 	if(!sheets){
 		return null;
@@ -894,18 +895,19 @@ function placeParts(sheets, parts, config, nestindex){
 		fitness += sheetarea; // add 1 for each new sheet opened (lower fitness is better)
 		
 		var clipCache = [];
-		//console.log('new sheet');
+		console.log('new sheet');
+		
 		for(i=0; i<parts.length; i++){
+			
 			console.time('placement');
 			part = parts[i];
-			
+			// console.log('part', part);
 			// inner NFP
 			var sheetNfp = null;				
 			// try all possible rotations until it fits
 			// (only do this for the first part of each sheet, to ensure that all parts that can be placed are, even if we have to to open a lot of sheets)
 			for(j=0; j<(360/config.rotations); j++){
-				sheetNfp = getInnerNfp(sheet, part, config);
-				// console.log(sheetNfp);
+				sheetNfp = await getInnerNfp(sheet, part, config);
 				if(sheetNfp){
 					break;
 				}
@@ -972,7 +974,7 @@ function placeParts(sheets, parts, config, nestindex){
 			}
 			
 			for(j=startindex; j<placed.length; j++){
-				nfp = getOuterNfp(placed[j], part);
+				nfp = await getOuterNfp(placed[j], part);
 				// minkowski difference failed. very rare but could happen
 				if(!nfp){
 					error = true;
@@ -1036,8 +1038,7 @@ function placeParts(sheets, parts, config, nestindex){
 				// back to normal scale
 				f.push(toNestCoordinates(finalNfp[j], config.clipperScale));
 			}
-			finalNfp = f;
-						
+			finalNfp = f;	
 			// choose placement that results in the smallest bounding box/hull etc
 			// todo: generalize gravity direction
 			var minwidth = null;
@@ -1189,7 +1190,6 @@ function placeParts(sheets, parts, config, nestindex){
 		//if(minwidth){
 		fitness += (minwidth/sheetarea) + minarea;
 		//}
-		
 		for(i=0; i<placed.length; i++){
 			var index = parts.indexOf(placed[i]);
 			if(index >= 0){
@@ -1226,4 +1226,38 @@ function placeParts(sheets, parts, config, nestindex){
 function alert(message) { 
     console.log('alert: ', message);
 }
+
+async function getJSON(_params) {
+	var newParams = {
+		A:_params.A,
+		Achildren : _params.A.children,
+		Arotation : _params.A.rotation,
+		Asource : _params.A.source,
+		B:_params.B,
+		Brotation : _params.B.rotation,
+		Bsource : _params.B.source,
+	}
+	var  response = await fetch("/calculatenfp", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json; charset=utf-8"
+		},
+		body: JSON.stringify(newParams, null, 2 )
+	});
+
+	var resp = await response.json();
+	// var fetchJson = await response.json();
+	// console.log(resp.nfp);
+	var nfp = resp.nfp;
+	nfp[0].children = resp.nfpChildren;
+	return nfp;
+}
+
+async function caller(_params) {
+    var jsonData = await getJSON(_params);  // command waits until completion  
+	      
+	return jsonData;
+}
+
+
 // console.log('aaa');

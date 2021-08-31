@@ -1,19 +1,26 @@
 const express = require('express');
 const path = require('path');
 
-const { ipcRenderer } = require('electron'); 
+// const { ipcRenderer } = require('electron'); 
 const fs = require('graceful-fs');
 const request = require('request');
 const http = require('http');
 const url = require('url')
-
+const streamifier = require('streamifier');
+var bodyParser = require('body-parser');
 
 const app = express();
 const fileUpload = require("express-fileupload");
 app.use(fileUpload());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 const uuidv4 = require('uuid/v4'); 
 const port = process.env.PORT || 8080;
 const addon = require('./minkowski/Release/addon');
+// const addon = require('./build2/Release/addon');
+
+
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
       webPreferences: {
@@ -23,22 +30,154 @@ app.on('ready', () => {
   });
 });
 
+// app.use(function(req, res, next) {
+//     var origin = req.headers.origin;
+//     res.header("Access-Control-Allow-Origin", origin); 
+//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+//     res.header("Access-Control-Allow-Credentials", "true");
+//     next();
+//   });
+  
 app.use(express.static(path.join(__dirname, 'main')));
+app.use(express.static('files'))
 
 // sendFile will go here
 app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, '/main/index2.html'));
 });
 
+
+// sendFile will go here
+app.post('/calculatenfp', function(req, res) {
+	var A = req.body.A;
+	A.children = req.body.Achildren;
+	A.rotation = req.body.Arotation;
+	A.source = req.body.Asource;
+	var B = req.body.B;
+	B.rotation = req.body.Brotation;
+	B.source = req.body.Bsource;
+	nfp = addon.calculateNFP({A: A, B: B});
+	data = {
+		nfp:nfp,
+		nfpChildren:nfp[0].children
+	}
+	// console.log();
+	// console.log(JSON.stringify(data));
+	// console.log(JSON.stringify(nfp));
+	// res.end(nfp);
+	res.end(JSON.stringify(data));
+});
+
+app.post('/writefile', function(req, res) {
+	var fileName = uuidv4();
+	
+	if(req.body.type=='svg'){
+		fileName = fileName+'.svg';
+		fs.writeFileSync('./files/svg/'+fileName, req.body.filedata);
+		data = {
+			url:"http://"+req.get('host')+'/svg/'+fileName,
+			filename:fileName
+		};
+		res.end(JSON.stringify(data));
+	}else if(req.body.type=='dxf'){
+		fileName = fileName+'.dxf';
+		var postreq = request.post('http://convert.deepnest.io', function (err, resp, body) {
+			if (err) {
+				msg = 'could not contact file conversion server';
+			} else {
+				if(body.substring(0, 5) == 'error'){
+					msg = body;
+				}
+				else{
+					fs.writeFileSync('./files/dxf/'+fileName, body);
+					data = {
+						url:"http://"+req.get('host')+'/dxf/'+fileName,
+						filename:fileName
+					};
+					res.end(JSON.stringify(data));
+				}
+			}
+		});
+		var form = postreq.form();
+		form.append('format', 'dxf');
+		form.append('fileUpload', req.body.filedata, {
+		  filename: 'deepnest.svg',
+		  contentType: 'image/svg+xml'
+		});
+	}
+});
+
 app.post('/import', (req, res) => {
-	data = [];
+	var data = [];
+	var datafiles = [];
 	if(Array.isArray(req.files.importFiles)){
-		for(var i = 0; i<req.files.importFiles.length; i++){
-			data.push(processFile(req.files.importFiles[i]))
-		}
+		datafiles = req.files.importFiles;
 	}else{
-		data.push(processFile(req.files.importFiles))
+		datafiles.push(req.files.importFiles);
 	}		
+	var promiseArray = [];
+	for(var i = 0; i<datafiles.length; i++){
+	
+		var file = datafiles[i];
+		var ext = path.extname(file.name);
+		var filename = path.basename(file.name);
+	
+		if(ext.toLowerCase() == '.svg'){
+			readFileData = readFile(file);
+			var fdata =  {data:readFileData.fileStr, name:file.name, dirpath:readFileData.dirpath, scalingFactor:null }
+			data.push(fdata);
+		}else{
+
+			// readFileData = readFile(file);
+			// var url = 'http://convert.deepnest.io';
+
+			// var req = request.post(url, function (err, resp, body) {
+			// 	if (err) {
+				
+			// 	} else {
+			// 		if(body.substring(0, 5) == 'error'){
+			// 			// console.log(body);
+			// 		}
+			// 		else{
+			// 			// expected input dimensions on server is points
+			// 			// scale based on unit preferences
+			// 			var con = null;
+			// 			var dxfFlag = false;
+			// 			if(ext.toLowerCase() == '.dxf'){
+			// 				//var unit = config.getSync('units');
+			// 				con = Number("1");
+			// 				dxfFlag = true;
+			// 				// console.log('con', con);
+							
+			// 				/*if(unit == 'inch'){
+			// 					con = 72;
+			// 				}
+			// 				else{
+			// 					// mm
+			// 					con = 2.83465;
+			// 				}*/
+			// 			}
+						
+			// 			// dirpath is used for loading images embedded in svg files
+			// 			// converted svgs will not have images
+			// 			// console.log({data:body, name:filename, dirpath:null, scalingFactor:con, dxfFlag:dxfFlag });
+			// 			fdata =  {data:body, name:filename, dirpath:null, scalingFactor:con, dxfFlag:dxfFlag }
+				
+			// 		}
+			// 	}
+				
+			// var form = req.form();
+			// form.append('format', 'svg');
+			// // streamifier.streamifier.createReadStream(file.data).pipe(process.stdout);
+			// form.append('fileUpload', fs.createReadStream(readFileData.dirpath+'/'+file.name));
+			
+			// })
+			
+		}
+
+	}
+	
+
 	res.end(JSON.stringify(data));
 });
 
@@ -47,23 +186,17 @@ function processFile(file){
 	var filename = path.basename(file.name);
 	if(ext.toLowerCase() == '.svg'){
 		readFileData = readFile(file);
-		// importbutton.className = 'button import';
 		return {data:readFileData.fileStr, name:file.name, dirpath:readFileData.dirpath, scalingFactor:null }
 	}else{
-		importbutton.className = 'button import spinner';
 		// send to conversion server
-		var url = config.getSync('conversionServer');
-		if(!url){
-			url = defaultConversionServer;
-		}
-		
+		readFileData = readFile(file);
+		var url = 'http://convert.deepnest.io';
 		var req = request.post(url, function (err, resp, body) {
-			importbutton.className = 'button import';
 			if (err) {
-				message('could not contact file conversion server', true);
+				// console.log(err, true);
 			} else {
 				if(body.substring(0, 5) == 'error'){
-					message(body, true);
+					// console.log(body);
 				}
 				else{
 					// expected input dimensions on server is points
@@ -72,9 +205,9 @@ function processFile(file){
 					var dxfFlag = false;
 					if(ext.toLowerCase() == '.dxf'){
 						//var unit = config.getSync('units');
-						con = Number(config.getSync('dxfImportScale'));
+						con = Number("1");
 						dxfFlag = true;
-						console.log('con', con);
+						// console.log('con', con);
 						
 						/*if(unit == 'inch'){
 							con = 72;
@@ -87,13 +220,15 @@ function processFile(file){
 					
 					// dirpath is used for loading images embedded in svg files
 					// converted svgs will not have images
-					importData(body, filename, null, con, dxfFlag);
+					// console.log({data:body, name:filename, dirpath:null, scalingFactor:con, dxfFlag:dxfFlag });
+					return {data:body, name:filename, dirpath:null, scalingFactor:con, dxfFlag:dxfFlag }
 				}
 			}
 		});
 		var form = req.form();
 		form.append('format', 'svg');
-		form.append('fileUpload', fs.createReadStream(fileName[0]));
+		// streamifier.streamifier.createReadStream(file.data).pipe(process.stdout);
+		form.append('fileUpload', fs.createReadStream(readFileData.dirpath+'/'+file.name));
 	}
 }
 

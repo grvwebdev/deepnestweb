@@ -4,7 +4,12 @@
   "description": "Deep nesting for Laser and CNC",
   "main": "main.js",
   "scripts": {
-    "start": "nodemon main.js"
+    "start": "electron .",
+    "configure": "node-gyp configure --release",
+    "build": "node-gyp rebuild --target=1.4.8 --arch=x64 --dist-url=https://atom.io/download/atom-shell",
+    "clean": "node-gyp clean configure build --verbose --target=1.4.8 --arch=ia32 --dist-url=https://atom.io/download/atom-shell",
+    "pack": "build --dir",
+    "dist": "build"
   },
   "repository": "https://github.com/Jack000",
   "keywords": [
@@ -19,20 +24,23 @@
     "url": "http://deepnest.io"
   },
   "devDependencies": {
-    "electron": "^13.1.9",
-    "electron-rebuild": "^1.4.0",
-    "nodemon": "^2.0.12"
+    "electron": "^1.4.1",
+    "electron-builder": "^20.26.0",
+    "electron-rebuild": "^1.4.0"
   },
   "dependencies": {
-    "electron-settings": "^4.0.2",
+    "electron-config": "^0.2.1",
+    "electron-settings": "^2.2.2",
+    "electron-window-manager": "^1.0.4",
     "express": "^4.17.1",
     "express-fileupload": "^1.2.1",
     "filequeue": "^0.5.0",
     "graceful-fs": "^4.1.11",
     "melanke-watchjs": "^1.3.1",
-    "nan": "^2.15.0",
+    "nan": "^2.4.0",
     "paralleljs": "^0.2.1",
     "request": "^2.79.0",
+    "streamifier": "^0.1.1",
     "write-file-queue": "0.0.1"
   },
   "build": {

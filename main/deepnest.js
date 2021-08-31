@@ -17,9 +17,25 @@
 		
 		var svg = null;
 		
+		// var config = {
+		// 	clipperScale: 10000000,
+		// 	curveTolerance: 0.3, 
+		// 	spacing: 0,
+		// 	rotations: 4,
+		// 	populationSize: 10,
+		// 	mutationRate: 10,
+		// 	threads: 4,
+		// 	placementType: 'gravity',
+		// 	mergeLines: true,
+		// 	timeRatio: 0.5,
+		// 	scale: 72,
+		// 	simplify: false
+		// };
+		
+
 		var config = {
 			clipperScale: 10000000,
-			curveTolerance: 0.3, 
+			curveTolerance: 0.72, 
 			spacing: 0,
 			rotations: 4,
 			populationSize: 10,
@@ -31,7 +47,7 @@
 			scale: 72,
 			simplify: false
 		};
-		
+
 		// list of imported files
 		// import: {filename: 'blah.svg', svg: svgroot}
 		this.imports = [];
@@ -39,7 +55,7 @@
 		// list of all extracted parts
 		// part: {name: 'part name', quantity: ...}
 		this.parts = [];
-		
+		this.worker = null;
 		// a pure polygonal representation of parts that lives only during the nesting step
 		this.partsTree = [];
 		
@@ -1014,7 +1030,7 @@
 			}
 		}
 		
-		const worker = new Worker("./back2.js");
+		const worker = this.worker = new Worker("./back2.js");
 
 		// w.onmessage = function(event){
 //     console.log(event.data) ;
@@ -1025,6 +1041,7 @@
 			
 			if(event.data.process == 'background-response'){
 				var payload = event.data.placement;
+				console.log(payload);
 				if(!GA){
 					// user might have quit while we're away
 					return;
@@ -1033,7 +1050,7 @@
 				GA.population[payload.index].fitness = payload.fitness;
 				
 				// render placement
-				console.log(self.nests);
+				// console.log(self.nests);
 				if(self.nests.length == 0 || self.nests[0].fitness > payload.fitness ){
 					self.nests.unshift(payload);
 					if(self.nests.length > 10){
@@ -1043,6 +1060,9 @@
 						displayCallback();
 					}
 				}
+			}else if(event.data.process == 'background-progress'){
+				var bar = document.querySelector('#progressbar');
+				bar.setAttribute('style', 'width: '+parseInt(event.data.progress*100)+'%'+(event.data.progress < 0.01 ? '; transition: none' : ''));
 			}
 		}
 		
@@ -1096,8 +1116,9 @@
 				});
 				
 				GA = new GeneticAlgorithm(adam, config);
-				//console.log(GA.population[1].placement);				
+				// console.log(GA.population[1].placement);				
 			}
+			// console.log('ga popu', GA.population[i]);
 									
 			// check if current generation is finished
 			var finished = true;
@@ -1162,6 +1183,7 @@
 
 					// mainWindow.webContents.send('background-start', mobj);
 					// ipcRenderer.send('background-start', mobj);
+					// console.log(mobj);
 					worker.postMessage(mobj);
 					running++;					
 				}
@@ -1354,7 +1376,6 @@
 		}
 		
 		this.population = [{placement: adam, rotation: angles}];
-		
 		while(this.population.length < config.populationSize){
 			var mutant = this.mutate(this.population[0]);
 			this.population.push(mutant);

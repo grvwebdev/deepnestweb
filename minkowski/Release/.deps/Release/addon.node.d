@@ -1,1 +1,1 @@
-cmd_Release/addon.node := c++ -bundle -undefined dynamic_lookup -Wl,-no_pie -Wl,-search_paths_first -mmacosx-version-min=10.7 -arch x86_64 -L./Release  -o Release/addon.node Release/obj.target/addon/addon.o Release/obj.target/addon/minkowski.o 
+cmd_Release/addon.node := ln -f "Release/obj.target/addon.node" "Release/addon.node" 2>/dev/null || (rm -rf "Release/addon.node" && cp -af "Release/obj.target/addon.node" "Release/addon.node")
