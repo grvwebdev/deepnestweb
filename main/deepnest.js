@@ -42,11 +42,18 @@
 			mutationRate: 10,
 			threads: 4,
 			placementType: 'gravity',
-			mergeLines: true,
+			mergeLines: true,  // turn off for colors
 			timeRatio: 0.5,
 			scale: 72,
-			simplify: false
+			simplify: false,  
+			units: 'mm',
+			dxfImportScale: "1",
+			dxfExportScale: "72",
+			endpointTolerance: 0.36,
+			conversionServer: 'http://convert.deepnest.io'
 		};
+
+		this.defaultConfig = config;
 
 		// list of imported files
 		// import: {filename: 'blah.svg', svg: svgroot}

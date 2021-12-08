@@ -1,12 +1,23 @@
 const express = require('express');
 const path = require('path');
-
+var async = require("async");
 // const { ipcRenderer } = require('electron'); 
 const fs = require('graceful-fs');
 const request = require('request');
 const http = require('http');
 const url = require('url')
+var requestSync = require('sync-request');
 const streamifier = require('streamifier');
+const AWS = require('aws-sdk');
+AWS.config.update({
+	region: 'us-east-1',
+	apiVersion: 'latest',
+	credentials: {
+	  accessKeyId: 'AKIAUJ2NC62KT64K7GXW',
+	  secretAccessKey: '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'
+	}
+})
+  
 var bodyParser = require('body-parser');
 
 const app = express();
@@ -22,6 +33,29 @@ const port = process.env.PORT || 3100;
 const addon = require('./minkowski/Release/addon');
 // const addon = require('./build2/Release/addon');
 
+const PDFDocument = require("pdfkit")
+const SVGtoPDF = require("svg-to-pdfkit")
+const window = require("svgdom")
+const document = window.document
+// const SVG = require("svg.js")(window)
+// Add headers before the routes are defined
+
+
+app.use(function (req, res, next) {
+
+    // Website you wish to allow to connect
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Request methods you wish to allow
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    // Request headers you wish to allow
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    // Set to true if you need the website to include cookies in the requests sent
+    // to the API (e.g. in case you use sessions)
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    // Pass to next layer of middleware
+    next();
+});
+
 
 app.on('ready', () => {
   mainWindow = new BrowserWindow({
@@ -32,13 +66,6 @@ app.on('ready', () => {
   });
 });
 
-// app.use(function(req, res, next) {
-//     var origin = req.headers.origin;
-//     res.header("Access-Control-Allow-Origin", origin); 
-//     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-//     res.header("Access-Control-Allow-Credentials", "true");
-//     next();
-//   });
   
 app.use(express.static(path.join(__dirname, 'main')));
 app.use(express.static('files'))
@@ -49,7 +76,83 @@ app.get('/', function(req, res) {
 });
 
 
-// sendFile will go here
+app.get('/aws', function(req, res) {
+		s3 = new AWS.S3();
+		var bucketParams = {
+			Bucket : 'jitorder-dev'
+		  };
+		  
+		  // call S3 to create the bucket
+		  s3.getBucketAcl(bucketParams, function(err, data) {
+			if (err) {
+			  console.log("Error", err);
+			} else if (data) {
+			  console.log("Success", data.Grants);
+			}
+		  });
+});
+
+
+function addSheet(width, height, count) {
+
+	var units = "mm";
+	var conversion = config.getSync('scale');
+
+	// remember, scale is stored in units/inch
+	if (units == 'mm') {
+		conversion /= 25.4;
+	}
+
+	var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+	rect.setAttribute('x', 0);
+	rect.setAttribute('y', 0);
+	rect.setAttribute('width', width * conversion);
+	rect.setAttribute('height', height * conversion);
+	svg.appendChild(rect);
+	DeepNest.importsvg(null, null, (new XMLSerializer()).serializeToString(svg));
+
+	DeepNest.parts[DeepNest.parts.length - 1].sheet = true;
+	DeepNest.parts[DeepNest.parts.length - 1].quantity = count;
+
+}
+
+
+
+app.post('/nest', function(req, res){
+	// addSheet(200,1000, 1); 
+	// data = ['hi'];
+	// res.end(JSON.stringify(req));
+
+	const doc = new PDFDocument({
+		layout: "landscape",
+		size: "A4"
+	  })
+	
+	  const draw = SVG(document.documentElement)
+	
+	  const nameSVG = draw
+		.text('test')
+		.size(45)
+		.attr("x", "50%")
+		.attr("y", "45%")
+		.attr("text-anchor", "middle")
+	
+	  const dateSVG = draw
+		.text('test1')
+		.size(19)
+		.attr("x", "13.9%")
+		.attr("y", "87.7%")
+	
+	  SVGtoPDF(doc, background)
+	  SVGtoPDF(doc, nameSVG.svg())
+	  SVGtoPDF(doc, dateSVG.svg())
+	
+	  doc.pipe(res)
+	  doc.end()
+})
+
+
 app.post('/calculatenfp', function(req, res) {
 	var A = req.body.A;
 	A.children = req.body.Achildren;
@@ -70,20 +173,17 @@ app.post('/calculatenfp', function(req, res) {
 	res.end(JSON.stringify(data));
 });
 
-app.post('/writefile', function(req, res) {
-	var fileName = uuid.v4();
-	
+app.post('/writefile', async function(req, res) {	
 	if(req.body.type=='svg'){
-		fileName = fileName+'.svg';
-		fs.writeFileSync('./files/svg/'+fileName, req.body.filedata);
-		data = {
-			url:"http://"+req.get('host')+'/svg/'+fileName,
-			filename:fileName
-		};
+	  	data = writeFileCust('svg', req)
+		res.end(JSON.stringify(data));
+	}else if(req.body.type=='pdf'){
+		data = writeFileCust('pdf', req)
 		res.end(JSON.stringify(data));
 	}else if(req.body.type=='dxf'){
+		var fileName = uuid.v4();
 		fileName = fileName+'.dxf';
-		var postreq = request.post('http://convert.deepnest.io', function (err, resp, body) {
+		var postreq =  request.post('http://convert.deepnest.io', function (err, resp, body) {
 			if (err) {
 				msg = 'could not contact file conversion server';
 			} else {
@@ -106,12 +206,106 @@ app.post('/writefile', function(req, res) {
 		  filename: 'deepnest.svg',
 		  contentType: 'image/svg+xml'
 		});
+		
+	}else if(req.body.type=='exportall'){
+		svgdata = writeFileCust('svg', req)
+		pdfdata = writeFileCust('pdf', req)
+	
+		
+		// var uploadParams = {Bucket: 'jitorder-dev', Key: '', Body: ''};
+		var fs = require('fs');
+
+		
+		s3 = new AWS.S3();
+		uploadParams = [];
+	
+
+		var fileName = uuid.v4();
+		fileName = fileName+'.dxf';
+		var postreq =  request.post('http://convert.deepnest.io', async function (err, resp, body) {
+			if (err) {
+				msg = 'could not contact file conversion server';
+			} else {
+				if(body.substring(0, 5) == 'error'){
+					msg = body;
+				}
+				else{
+					fs.writeFileSync('./files/dxf/'+fileName, body);
+					dxfdata = {
+						url:"http://"+req.get('host')+'/dxf/'+fileName,
+						filename:fileName
+					};
+					
+					data = {
+						batch_id:req.body.batchid
+					}
+
+					var svg = './files/svg/'+svgdata.filename;
+					var svgStream = fs.createReadStream(svg);
+					uploadParams.push({'body':svgStream, 'id':path.basename(svg), 'type':'svg'});
+			
+					var pdf = './files/pdf/'+pdfdata.filename;
+					var pdfStream = fs.createReadStream(pdf);
+					uploadParams.push({'body':pdfStream, 'id':path.basename(pdf), 'type':'pdf'});
+
+					var dxf = './files/dxf/'+dxfdata.filename;
+					var dxfStream = fs.createReadStream(dxf);
+					uploadParams.push({'body':dxfStream, 'id':path.basename(dxf), 'type':'dxf'});
+			
+					var mfiles = [{batch_id:req.body.batchid}];
+					for (const file of uploadParams) {
+						const params = {
+							Bucket: 'jitorder-dev',
+							Key: file.id,
+							Body: file.body,
+							ACL: 'public-read',
+						};
+						try {
+							const stored = await s3.upload(params).promise()
+							data[file.type] = {'type' : file.type, 'url':stored.Location};
+						} catch (err) {
+							console.log(err)
+						}
+					}
+					// console.log("Upload Success", stored);
+					let returnedB64 =  requestSync('POST', 'http://localhost/jitorder1/public/api/v1/sync_batch_files/'+req.body.batchid, {json:data});
+					// console.log();
+					res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
+				}
+			}
+		});
+		var form = postreq.form();
+		form.append('format', 'dxf');
+		form.append('fileUpload', req.body.filedata, {
+		  filename: 'deepnest.svg',
+		  contentType: 'image/svg+xml'
+		});
+		
 	}
 });
 
+function upload(array) {
+	s3 = new AWS.S3();
+    async.eachSeries(array, function(item, cb) {
+        var params = {Bucket : 'jitorder-dev', Key: item.id, Body: item.body};
+        s3.upload(params, function(err, data) {
+            if (err) {
+              console.log("Error uploading data. ", err);
+              cb(err)
+            } else {
+              console.log("Success uploading data");
+              cb()
+            }
+        })
+    }, function(err) {
+        if (err) console.log('one of the uploads failed')
+        else console.log('all files uploaded')
+    })
+}
 app.post('/import', (req, res) => {
 	var data = [];
 	var datafiles = [];
+	
 	if(Array.isArray(req.files.importFiles)){
 		datafiles = req.files.importFiles;
 	}else{
@@ -182,7 +376,46 @@ app.post('/import', (req, res) => {
 
 	res.end(JSON.stringify(data));
 });
+app.post('/importfrombatch', (req, res) => {
+	var data = [];
+	var datafiles = [];
+	
+	if(Array.isArray(req.body.importFiles)){
+		datafiles = req.body.importFiles;
+	}else{
+		datafiles.push(req.body.importFiles);
+	}		
+	var promiseArray = [];
+	for(var i = 0; i<datafiles.length; i++){
 
+		var file = datafiles[i];
+		var ext = path.extname(file);
+		var filename = path.basename(file);
+
+		if(ext.toLowerCase() == '.svg'){
+			var filename = uuid.v4()+ext;
+			filePath = __dirname+'/files/'+filename;
+			let returnedB64 =  requestSync('GET', file);
+			let bufferData = returnedB64.getBody();
+			let stringData = bufferData.toString();
+			// fileStr = file.data.toString('utf8');
+			fs.writeFileSync(filePath, stringData);
+			// console.log(); return;
+			// readFileData = readFile(filePath);
+			// var fdata =  {data:readFileData.fileStr, name:file.name, dirpath:readFileData.dirpath, scalingFactor:null }
+
+			// var file = fs.readFileSync(filePath, 'utf8');
+			// console.log(file);
+			// readFileData =  {dirpath:filePath, fileStr:file.toString()};
+			var fdata =  {data:stringData, name:filename, dirpath:__dirname+'/files/', scalingFactor:null }
+			data.push(fdata);
+		}else{
+			//svg is supported for now
+		}
+
+	}	
+	res.end(JSON.stringify(data));
+});
 function processFile(file){
 	var ext = path.extname(file.name);
 	var filename = path.basename(file.name);
@@ -258,5 +491,61 @@ function readFile(file){
 	// importData(file.data, file.name, null, null);
 };
 
+
+function writeFileCust(type, req){
+	var fileName = uuid.v4();
+	
+	if(type=='svg'){
+	  	fileName = fileName+'.svg';
+		fs.writeFileSync('./files/svg/'+fileName, req.body.filedata);
+		data = {
+			url:"http://"+req.get('host')+'/svg/'+fileName,
+			filename:fileName
+		};
+		return data;
+	}else if(type=='pdf'){
+		fileName = fileName+'.pdf';
+		const doc = new PDFDocument();
+	  	doc.pipe(fs.createWriteStream('./files/pdf/'+fileName));
+		PDFDocument.prototype.addSVG = function(svg, x, y, options) {
+			return SVGtoPDF(this, svg, x, y, options), this;
+		};
+		doc.addSVG(req.body.filedata, 0,0, {width:1000, height:100});
+		doc.end();
+		data = {
+			url:"http://"+req.get('host')+'/pdf/'+fileName,
+			filename:fileName
+		};
+		return data;
+	}else if(type=='dxf'){
+		fileName = fileName+'.dxf';
+		var postreq = request.post('http://convert.deepnest.io', function (err, resp, body) {
+			if (err) {
+				msg = 'could not contact file conversion server';
+			} else {
+				if(body.substring(0, 5) == 'error'){
+					msg = body;
+				}
+				else{
+					fs.writeFileSync('./files/dxf/'+fileName, body);
+					data = {
+						url:"http://"+req.get('host')+'/dxf/'+fileName,
+						filename:fileName
+					};
+					return data;
+				}
+			}
+		});
+		var form = postreq.form();
+		form.append('format', 'dxf');
+		form.append('fileUpload', req.body.filedata, {
+		  filename: 'deepnest.svg',
+		  contentType: 'image/svg+xml'
+		});
+	}
+
+}
+
 app.listen(port);
-console.log('Server started at http://52.4.107.14:' + port);
+// console.log('Server started at http://52.4.107.14:' + port);
+console.log('Server started at http://localhost:' + port);

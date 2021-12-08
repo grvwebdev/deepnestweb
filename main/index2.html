@@ -39,9 +39,20 @@
 		// const request = require('request');
 		// const http = require('http');
 		// const path = require('path');
-		
 		ready(function(){
-			// main navigation			
+			// main navigation
+			var options = '';
+			var req = fetch('http://localhost/jitorder1/public/api/v1/get_batches_to_nest', {
+					method: 'post',
+					// body: fd /* or aFile[0]*/,
+				}).then(function(res){ return res.json(); })
+				.then(function(data){ 
+					var select = document.getElementById('batchoptions');
+					for (var i=0; i<data.length; i++) {
+						select.options[select.options.length] = new Option('Batch - '+data[i].id, data[i].id);
+					}				
+				}); 
+
 			var tabs = document.querySelectorAll('#sidenav li');
 			
 			Array.from(tabs).forEach(tab => {
@@ -71,24 +82,25 @@
 			// const config = require('electron-settings');
 			// window.config = config;
 			
-			var defaultconfig = {
-			  units: 'inch',
-			  scale: 72, // actual stored value will be in units/inch
-			  spacing: 0,
-			  curveTolerance: 0.72, // store distances in native units
-			  rotations: 4,
-			  threads: 4,
-			  populationSize: 10,
-			  mutationRate: 10,
-			  placementType: 'box', // how to place each part (possible values gravity, box, convexhull)
-			  mergeLines: true, // whether to merge lines
-			  timeRatio: 0.5, // ratio of material reduction to laser time. 0 = optimize material only, 1 = optimize laser time only
-			  simplify: false,
-			  dxfImportScale: "1",
-			  dxfExportScale: "72",
-			  endpointTolerance: 0.36,
-			  conversionServer: 'http://convert.deepnest.io'
-			};
+			var defaultconfig = DeepNest.defaultConfig; 
+			// {
+			//   units: 'inch',
+			//   scale: 72, // actual stored value will be in units/inch
+			//   spacing: 0,
+			//   curveTolerance: 0.72, // store distances in native units
+			//   rotations: 4,
+			//   threads: 4,
+			//   populationSize: 10,
+			//   mutationRate: 10,
+			//   placementType: 'box', // how to place each part (possible values gravity, box, convexhull)
+			//   mergeLines: true, // whether to merge lines
+			//   timeRatio: 0.5, // ratio of material reduction to laser time. 0 = optimize material only, 1 = optimize laser time only
+			//   simplify: false,
+			//   dxfImportScale: "1",
+			//   dxfExportScale: "72",
+			//   endpointTolerance: 0.36,
+			//   conversionServer: 'http://convert.deepnest.io'
+			// };
 			
 			// config.defaults(defaultconfig);
 			
@@ -553,6 +565,66 @@
 			// var app = electron.remote; 
 			// var fs = require('fs');
 			
+			var importPanelsfromApi = document.querySelector('#importPanles');
+			importPanelsfromApi.onclick = function(e){
+				var selecteBatchId = document.getElementById('batchoptions').value;
+				if(selecteBatchId != ''){
+					importPanelsfromApi.className = 'button import  spinner';
+					var req = fetch('http://localhost/jitorder1/public/api/v1/get_panels_by_batch/'+selecteBatchId, {
+					method: 'post',
+					// body: fd /* or aFile[0]*/,
+				}).then(function(res){ return res.json(); })
+				.then(function(data){ 
+					importfiles = document.querySelector('#importfiles');
+					var fd = new FormData();
+					for (var i=0; i<data.length; i++) {
+						// readFile(data[i].file);
+						// datafiles.push(datafiles);
+						if(data[i].file != null){
+							fd.append("importFiles", data[i].file);
+						}
+					}
+
+					var req = fetch('/importfrombatch', {
+					method: 'post',
+					body: fd /* or aFile[0]*/,
+					}).then(function(res){ return res.json(); })
+					.then(function(data){ 
+						importbutton.className = 'button import';
+						if(Array.isArray(data)){
+							for(var i = 0; i<data.length; i++){
+								importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor);
+							}
+							conversion = defaultconfig.scale;
+							// if(units == 'mm'){
+								conversion /= 25.4;
+							// }
+							
+							var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+							var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+							rect.setAttribute('x',0);
+							rect.setAttribute('y',0);
+							rect.setAttribute('width',1000*conversion);
+							rect.setAttribute('height',1117.6*conversion);
+							svg.appendChild(rect);
+							DeepNest.importsvg(null, null, (new XMLSerializer()).serializeToString(svg));
+							DeepNest.parts[DeepNest.parts.length-1].sheet = true;
+							ractive.update('parts');
+							resize();
+						}	
+						// console.log( data ) 
+					
+					}); // returns a promise
+
+
+					importPanelsfromApi.className = 'button btn-sm';				
+				}); 
+
+				}else{
+					console.log('select a batch first');
+				}
+			}
+
 			var importbutton = document.querySelector('#import');
 
 			fileinput.onchange = function(e){
@@ -1024,6 +1096,48 @@
 			}
 			
 			var exportbutton = document.querySelector('#export');
+
+
+			var exportall = document.querySelector('#exportAll');
+			exportall.onclick = function(){
+				var selecteBatchId = document.getElementById('batchoptions').value;
+
+				// var dialog = app.dialog;
+				// dialog.showSaveDialog({title: 'Export Deepnest SVG'}, function (fileName) {
+					// if(fileName === undefined){
+					// 	console.log("No file selected");
+					// }
+					// else{
+						var fileName = new Date().valueOf() + '.svg';
+						var selected = DeepNest.nests.filter(function(n){
+							return n.selected;
+						});
+						
+						if(selected.length == 0){
+							return false;
+						}
+						exportbutton.className = 'button export spinner';
+						var fileData = exportNest(selected.pop());
+						var myHeaders = new Headers();
+						myHeaders.append('Content-Type', 'text/html');
+						fetch('/writefile',{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json; charset=utf-8"
+							},
+							body: JSON.stringify({filedata:fileData,type:'exportall', batchid:selecteBatchId}, null, 2 )
+						}).then(function(response) {
+							exportbutton.className = 'button export';
+							response.json().then(function(text) {
+								console.log(text);
+								
+							})
+						}).catch(function(err) {
+							exportbutton.className = 'button export';
+							console.log(err)
+						});
+					
+						};
 			
 			var exportsvg = document.querySelector('#exportsvg');
 			exportsvg.onclick = function(){
@@ -1052,6 +1166,51 @@
 								"Content-Type": "application/json; charset=utf-8"
 							},
 							body: JSON.stringify({filedata:fileData,type:'svg'}, null, 2 )
+						}).then(function(response) {
+							exportbutton.className = 'button export';
+							response.json().then(function(text) {
+								// console.log(text.url);
+								var link = document.createElement("a");
+								link.href = text.url;
+								link.download = text.filename;
+								document.body.appendChild(link);
+								link.click();
+								document.body.removeChild(link);
+							})
+						}).catch(function(err) {
+							exportbutton.className = 'button export';
+							console.log(err)
+						});
+					
+						};
+
+						var exportpdf = document.querySelector('#exportpdf');
+						exportpdf.onclick = function(){
+				
+				// var dialog = app.dialog;
+				// dialog.showSaveDialog({title: 'Export Deepnest SVG'}, function (fileName) {
+					// if(fileName === undefined){
+					// 	console.log("No file selected");
+					// }
+					// else{
+						var fileName = new Date().valueOf() + '.svg';
+						var selected = DeepNest.nests.filter(function(n){
+							return n.selected;
+						});
+						
+						if(selected.length == 0){
+							return false;
+						}
+						exportbutton.className = 'button export spinner';
+						var fileData = exportNest(selected.pop());
+						var myHeaders = new Headers();
+						myHeaders.append('Content-Type', 'text/html');
+						fetch('/writefile',{
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json; charset=utf-8"
+							},
+							body: JSON.stringify({filedata:fileData,type:'pdf'}, null, 2 )
 						}).then(function(response) {
 							exportbutton.className = 'button export';
 							response.json().then(function(text) {
@@ -1593,8 +1752,10 @@
 			<span id="export_wrapper">
 			<li class="button export disabled" id="export">Export</li>
 			<ul class="dropdown">
+				<li id="exportAll">Update Batch</li>
 				<li id="exportsvg">SVG file</li>
 				<li id="exportdxf">DXF file</li>
+				<li id="exportpdf">PDF file</li>
 				<!--<li id="exportgcode">GCode file</li>-->
 			</ul>
 			</span>
@@ -1662,6 +1823,12 @@
 				<ul class="topnav">
 					<li class="button import" id="import">Import</li>
 					<li class="button start {{ getSheets().length == 0 ? "disabled" : "" }}" id="startnest">Start nest</li>
+					<li class="select" id="">
+						<select id="batchoptions">
+							<option value="">Select Batch</option>
+						</select>
+					</li>
+					<li class="button btn-sm" id="importPanles">Import Panels</li>
 				</ul>
 				
 				<div id="parts" class="parts-drag">
@@ -3007,5 +3174,8 @@
 		<input id="fileinput" type="file" style="visibility:hidden" multiple accept=".svg" />
 		<!-- .svg, .dxf -->
 	</form>
+
+
+	
 	</body>
 </html>
