@@ -268,7 +268,7 @@ app.post('/writefile', async function(req, res) {
 						}
 					}
 					// console.log("Upload Success", stored);
-					let returnedB64 =  requestSync('POST', 'http://localhost/jitorder1/public/api/v1/sync_batch_files/'+req.body.batchid, {json:data});
+					let returnedB64 =  requestSync('POST', 'http://3.85.107.164/api/v1/sync_batch_files/'+req.body.batchid, {json:data});
 					// console.log();
 					res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
 				}

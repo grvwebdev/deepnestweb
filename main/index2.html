@@ -42,7 +42,7 @@
 		ready(function(){
 			// main navigation
 			var options = '';
-			var req = fetch('http://localhost/jitorder1/public/api/v1/get_batches_to_nest', {
+			var req = fetch('http://3.85.107.164/api/v1/get_batches_to_nest', {
 					method: 'post',
 					// body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
@@ -570,7 +570,7 @@
 				var selecteBatchId = document.getElementById('batchoptions').value;
 				if(selecteBatchId != ''){
 					importPanelsfromApi.className = 'button import  spinner';
-					var req = fetch('http://localhost/jitorder1/public/api/v1/get_panels_by_batch/'+selecteBatchId, {
+					var req = fetch('http://3.85.107.164/api/v1/get_panels_by_batch/'+selecteBatchId, {
 					method: 'post',
 					// body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
