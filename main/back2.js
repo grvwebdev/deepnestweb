@@ -201,7 +201,7 @@ onmessage = function(e){
         }
     }
     
-    console.log('pairs: ',pairs.length);
+    // console.log('pairs: ',pairs.length);
       
       var process = function(pair){
         var A = rotatePolygon(pair.A, pair.Arotation);
@@ -283,15 +283,15 @@ onmessage = function(e){
       // run the placement synchronously
       async function sync(){
           //console.log('starting synchronous calculations', Object.keys(window.nfpCache).length);
-          console.log('in sync');
+        //   console.log('in sync');
           var c=0;
           for (var key in window.nfpcache) {
             c++;
         }
-        console.log('nfp cached:', c);
+        // console.log('nfp cached:', c);
         var placement = await placeParts(data.sheets, parts, data.config, index);
         placement.index = data.index;
-		console.log(placement);
+		// console.log(placement);
 		// console.log('background-response');
         // ipcRenderer.send('background-response', placement);
 		var psmsgData = {process:'background-response', placement}
@@ -375,8 +375,8 @@ onmessage = function(e){
                 window.db.insert(doc);
                 
             }
-            console.timeEnd('Total');
-            console.log('before sync');
+            // console.timeEnd('Total');
+            // console.log('before sync');
             sync();
           });
       }
@@ -688,7 +688,7 @@ async function getOuterNfp(A, B, inside){
 	// console.log(A.children);
 		// nfp = GeometryUtil.noFitPolygonRectangle(A,B);
 		var _params = {A: A, B: B};
-		console.log('parameters', _params);
+		// console.log('parameters', _params);
 		var resp = await getJSON(_params);
 		nfp = resp;
 	}
@@ -725,7 +725,7 @@ async function getOuterNfp(A, B, inside){
 		}
 		
 		nfp = [clipperNfp];
-		console.log(clipperNfp);	
+		// console.log(clipperNfp);	
 		// console.log('clipper nfp', JSON.stringify(nfp));
 		// console.timeEnd('clipper');
 	}
@@ -834,7 +834,7 @@ async function getInnerNfp(A, B, config){
 	
 	if(typeof A.source !== 'undefined' && typeof B.source !== 'undefined'){
 		// insert into db
-		console.log('inserting inner: ',A.source, B.source, B.rotation, f);
+		// console.log('inserting inner: ',A.source, B.source, B.rotation, f);
 		var doc = {
 			A: A.source,
 			B: B.source,
@@ -869,10 +869,9 @@ async function placeParts(sheets, parts, config, nestindex){
 		r.rotation = parts[i].rotation;
 		r.source = parts[i].source;
 		r.id = parts[i].id;
-		
+		r.identifier = parts[i].identifier;
 		rotated.push(r);
 	}
-	
 	parts = rotated;
 	
 	var allplacements = [];
@@ -895,11 +894,11 @@ async function placeParts(sheets, parts, config, nestindex){
 		fitness += sheetarea; // add 1 for each new sheet opened (lower fitness is better)
 		
 		var clipCache = [];
-		console.log('new sheet');
+		// console.log('new sheet');
 		
 		for(i=0; i<parts.length; i++){
 			
-			console.time('placement');
+			// console.time('placement');
 			part = parts[i];
 			// console.log('part', part);
 			// inner NFP
@@ -916,6 +915,7 @@ async function placeParts(sheets, parts, config, nestindex){
 				r.rotation = part.rotation + (360/config.rotations);
 				r.source = part.source;
 				r.id = part.id;
+				r.identifier = part.identifier;
 				
 				// rotation is not in-place
 				part = r;
@@ -942,13 +942,11 @@ async function placeParts(sheets, parts, config, nestindex){
 								y: sheetNfp[j][k].y-part[0].y,
 								id: part.id,
 								rotation: part.rotation,
-								source: part.source
+								source: part.source,
+								identifier: part.identifier
 							}
 						}
 					}
-				}
-				if(position === null){
-					console.log(sheetNfp);
 				}
 				placements.push(position);
 				placed.push(part);
@@ -1078,7 +1076,8 @@ async function placeParts(sheets, parts, config, nestindex){
 						y: nf[k].y-part[0].y,
 						id: part.id,
 						source: part.source,
-						rotation: part.rotation
+						rotation: part.rotation,
+						identifier: part.identifier
 					};
 					
 					
@@ -1168,6 +1167,7 @@ async function placeParts(sheets, parts, config, nestindex){
 			}
 			
 			if(position){
+				// console.log(part);
 				placed.push(part);
 				placements.push(position);
 				if(position.mergedLength){

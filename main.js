@@ -189,8 +189,8 @@ app.post('/writefile', async function(req, res) {
 			} else {
 				if(body.substring(0, 5) == 'error'){
 					msg = body;
-				}
-				else{
+				}else{
+					var fs = require('fs');
 					fs.writeFileSync('./files/dxf/'+fileName, body);
 					data = {
 						url:"http://"+req.get('host')+'/dxf/'+fileName,
@@ -237,7 +237,8 @@ app.post('/writefile', async function(req, res) {
 					};
 					
 					data = {
-						batch_id:req.body.batchid
+						batch_id:req.body.batchid,
+						batch_data:req.body.batchData
 					}
 
 					var svg = './files/svg/'+svgdata.filename;
@@ -263,14 +264,21 @@ app.post('/writefile', async function(req, res) {
 						try {
 							const stored = await s3.upload(params).promise()
 							data[file.type] = {'type' : file.type, 'url':stored.Location};
+							// data[file.type] = {'type' : file.type, 'url':'stored.Location'};
 						} catch (err) {
-							console.log(err)
+
+							res.end(JSON.stringify({'status':0, 'message':'unable to upload files nested files.'}));
 						}
 					}
 					// console.log("Upload Success", stored);
 					let returnedB64 =  requestSync('POST', 'http://3.85.107.164/api/v1/sync_batch_files/'+req.body.batchid, {json:data});
 					// console.log();
-					res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
+					try {
+						res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
+					  } catch (e) {	
+						res.end(JSON.stringify({'status':0, 'message':'Server Error'}));
+					  }
+					
 				}
 			}
 		});
@@ -389,6 +397,7 @@ app.post('/importfrombatch', (req, res) => {
 	for(var i = 0; i<datafiles.length; i++){
 
 		var file = datafiles[i];
+		var identifier = req.body.importRef[i];
 		var ext = path.extname(file);
 		var filename = path.basename(file);
 
@@ -407,7 +416,7 @@ app.post('/importfrombatch', (req, res) => {
 			// var file = fs.readFileSync(filePath, 'utf8');
 			// console.log(file);
 			// readFileData =  {dirpath:filePath, fileStr:file.toString()};
-			var fdata =  {data:stringData, name:filename, dirpath:__dirname+'/files/', scalingFactor:null }
+			var fdata =  {data:stringData, name:filename, dirpath:__dirname+'/files/', scalingFactor:null, identifier:identifier }
 			data.push(fdata);
 		}else{
 			//svg is supported for now

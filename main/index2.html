@@ -122,7 +122,7 @@
 			
 			Array.from(inputs).forEach(i => {
 				i.addEventListener('change', function(e) {
-					console.log('adsf');
+					// console.log('adsf');
 					var val = i.value;
 					var key = i.getAttribute('data-config');
 					
@@ -273,7 +273,7 @@
 					var height = this.get('bounds').height;
 					var units = defaultconfig.units; //config.getSync('units');
 					var conversion = defaultconfig.scale; //config.getSync('scale');
-					
+						
 					// trigger computed dependency chain
 					this.get('getUnits');
 					
@@ -575,16 +575,28 @@
 					// body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
 				.then(function(data){ 
+					if(data.status == 0){
+						message(data.message, 1);
+						importPanelsfromApi.className = 'button btn-sm';
+						return;
+					}
 					importfiles = document.querySelector('#importfiles');
 					var fd = new FormData();
-					for (var i=0; i<data.length; i++) {
-						// readFile(data[i].file);
-						// datafiles.push(datafiles);
-						if(data[i].file != null){
-							fd.append("importFiles", data[i].file);
+					var minssingFilesCount = 0;
+					for (var i=0; i<data.panels.length; i++) {
+						if(data.panels[i].file != null){
+							fd.append("importFiles", data.panels[i].file);
+							fd.append("importRef", data.panels[i].order_item_panel_ref_code);
+						}else{
+							minssingFilesCount++
 						}
 					}
-
+					if(minssingFilesCount > 0){
+						message(minssingFilesCount+' out of '+data.panels.length +' Panels files are missing', 1);
+						importPanelsfromApi.className = 'button btn-sm';
+						return;
+					}
+					// console.log(fd);
 					var req = fetch('/importfrombatch', {
 					method: 'post',
 					body: fd /* or aFile[0]*/,
@@ -593,7 +605,7 @@
 						importbutton.className = 'button import';
 						if(Array.isArray(data)){
 							for(var i = 0; i<data.length; i++){
-								importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor);
+								importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor, null, data[i].identifier);
 							}
 							conversion = defaultconfig.scale;
 							// if(units == 'mm'){
@@ -621,7 +633,8 @@
 				}); 
 
 				}else{
-					console.log('select a batch first');
+					// console.log('select a batch first');
+					message('select a batch first', true);
 				}
 			}
 
@@ -684,7 +697,8 @@
 					  ]}, function (fileName) {
 						if(fileName === undefined){
 							importbutton.className = 'button import';
-							console.log("No file selected");
+							// console.log("No file selected");
+							message('No file selected', true);
 						}
 						else{
 							var ext = path.extname(fileName[0]);
@@ -720,7 +734,7 @@
 												//var unit = config.getSync('units');
 												con = Number(config.getSync('dxfImportScale'));
 												dxfFlag = true;
-												console.log('con', con);
+												// console.log('con', con);
 												
 												/*if(unit == 'inch'){
 													con = 72;
@@ -761,8 +775,8 @@
 				});
 			};
 			
-			function importData(data, filename, dirpath, scalingFactor, dxfFlag){
-				window.DeepNest.importsvg(filename, dirpath, data, scalingFactor, dxfFlag);
+			function importData(data, filename, dirpath, scalingFactor, dxfFlag, identifier=null){
+				window.DeepNest.importsvg(filename, dirpath, data, scalingFactor, dxfFlag, identifier);
 
 				DeepNest.imports.forEach(function(im){
 					im.selected = false;
@@ -908,7 +922,7 @@
 			
 			// clear cache
 			var deleteCache = function() {
-				console.log('deletecache');
+				// console.log('deletecache');
 				var path = './nfpcache';
 				if( fs.existsSync(path) ) {
 					fs.readdirSync(path).forEach(function(file,index){
@@ -1015,7 +1029,6 @@
 								displayNest(this.DeepNest.nests[0]);
 								this.DeepNest.nests[0].selected = true;
 							}
-							
 							this.nest.update('nests');
 							
 							// enable export button
@@ -1108,33 +1121,55 @@
 					// 	console.log("No file selected");
 					// }
 					// else{
+						var placedPanels = [];
+						
 						var fileName = new Date().valueOf() + '.svg';
 						var selected = DeepNest.nests.filter(function(n){
 							return n.selected;
 						});
 						
+						
 						if(selected.length == 0){
 							return false;
 						}
+						var selectedBatch = selected.pop();
+						var batchData = {
+							area:selectedBatch.area,
+							fitness:selectedBatch.fitness,
+							mergedLength:selectedBatch.mergedLength
+						};
+						selectedBatch.placements.forEach(function(placement){
+							placement.sheetplacements.forEach(function(panel){
+								let panelData = {
+									identifier:panel.identifier,
+									rotation:panel.rotation,
+									x:panel.x,
+									y:panel.y
+								}
+								placedPanels.push(panelData);
+							});
+						});
+						batchData.placedPanels = placedPanels;
+
 						exportbutton.className = 'button export spinner';
-						var fileData = exportNest(selected.pop());
+						var fileData = exportNest(selectedBatch);
 						var myHeaders = new Headers();
 						myHeaders.append('Content-Type', 'text/html');
+						
 						fetch('/writefile',{
 							method: "POST",
 							headers: {
 								"Content-Type": "application/json; charset=utf-8"
 							},
-							body: JSON.stringify({filedata:fileData,type:'exportall', batchid:selecteBatchId}, null, 2 )
+							body: JSON.stringify({filedata:fileData,type:'exportall', batchid:selecteBatchId, batchData:batchData}, null, 2 )
 						}).then(function(response) {
 							exportbutton.className = 'button export';
 							response.json().then(function(text) {
-								console.log(text);
-								
+								message(text.message, text.status?0:1);
 							})
 						}).catch(function(err) {
 							exportbutton.className = 'button export';
-							console.log(err)
+							message(err, 1);
 						});
 					
 						};
@@ -1179,7 +1214,8 @@
 							})
 						}).catch(function(err) {
 							exportbutton.className = 'button export';
-							console.log(err)
+							// console.log(err)
+							message(err, true);
 						});
 					
 						};
@@ -1224,7 +1260,8 @@
 							})
 						}).catch(function(err) {
 							exportbutton.className = 'button export';
-							console.log(err)
+							// console.log(err)
+							message(err, true);
 						});
 					
 						};
@@ -1274,7 +1311,8 @@
 							})
 						}).catch(function(err) {
 							exportbutton.className = 'button export';
-							console.log(err)
+							// console.log(err)
+							message(err, true);
 						});
 					// }
 				// });
@@ -1382,7 +1420,7 @@
 				});
 				
 				var scale = defaultconfig.scale;
-				console.log(scale);
+				// console.log(scale);
 				if(dxf){
 					scale /= Number(defaultconfig.dxfExportScale); // inkscape on server side
 				}

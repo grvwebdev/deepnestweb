@@ -42,7 +42,7 @@
 			mutationRate: 10,
 			threads: 4,
 			placementType: 'gravity',
-			mergeLines: true,  // turn off for colors
+			mergeLines: false,  // turn off for colors
 			timeRatio: 0.5,
 			scale: 72,
 			simplify: false,  
@@ -77,7 +77,7 @@
 		var displayCallback = null;
 		// a running list of placements
 		this.nests = [];
-		this.importsvg = function(filename, dirpath, svgstring, scalingFactor, dxfFlag){
+		this.importsvg = function(filename, dirpath, svgstring, scalingFactor, dxfFlag, identifier=null){
 			// parse svg
 			// config.scale is the default scale, and may not be applied
 			// scalingFactor is an absolute scaling that must be applied regardless of input svg contents
@@ -91,11 +91,11 @@
 				});
 			}
 			
-			var parts = this.getParts(svg.children);
+			var parts = this.getParts(svg.children, identifier);
 			for(var i=0; i<parts.length; i++){
 				this.parts.push(parts[i]);
 			}
-			// console.log(this.parts);
+			console.log(this.parts);
 			// test simplification
 			/*for(i=0; i<parts.length; i++){
 				var part = parts[i];
@@ -661,7 +661,7 @@
 		
 		// assuming no intersections, return a tree where odd leaves are parts and even ones are holes
 		// might be easier to use the DOM, but paths can't have paths as children. So we'll just make our own tree.
-		this.getParts = function(paths){
+		this.getParts = function(paths, identifier=null){
 			
 			var i, j;
 			var polygons = [];
@@ -790,7 +790,7 @@
 				part.bounds = bounds;
 				part.area = bounds.width*bounds.height;
 				part.quantity = 1;
-				
+				part.identifier = identifier;
 				// load root element
 				part.svgelements.push(svgelements[part.polygontree.source]);
 				var index = openelements.indexOf(svgelements[part.polygontree.source]);
@@ -977,7 +977,8 @@
 				parts.push({
 					quantity: this.parts[i].quantity,
 					sheet: this.parts[i].sheet,
-					polygontree: this.cloneTree(this.parts[i].polygontree)
+					polygontree: this.cloneTree(this.parts[i].polygontree),
+					identifier: this.parts[i].identifier
 				});
 			}
 			
@@ -1028,7 +1029,6 @@
 			
 			var self = this;
 			this.working = true;
-			
 			if(!workerTimer){
 				workerTimer = setInterval(function(){
 					self.launchWorkers.call(self, parts, config, progressCallback, displayCallback);
@@ -1110,7 +1110,7 @@
 							var poly = this.cloneTree(parts[i].polygontree); // deep copy
 							poly.id = id; // id is the unique id of all parts that will be nested, including cloned duplicates
 							poly.source = i; // source is the id of each unique part from the main part list
-							
+							poly.identifier = parts[i].identifier;
 							adam.push(poly);
 							id++;
 						}
@@ -1187,10 +1187,8 @@
 					}
 					
 					var mobj = {process:'background-start', index: i, sheets: sheets, sheetids: sheetids, sheetsources: sheetsources, sheetchildren: sheetchildren, individual: GA.population[i], config: config, ids: ids, sources: sources, children: children};
-
 					// mainWindow.webContents.send('background-start', mobj);
 					// ipcRenderer.send('background-start', mobj);
-					// console.log(mobj);
 					worker.postMessage(mobj);
 					running++;					
 				}
