@@ -1,4 +1,5 @@
 const express = require('express');
+const env = require('dotenv').config().parsed;  
 const path = require('path');
 var async = require("async");
 // const { ipcRenderer } = require('electron'); 
@@ -10,14 +11,14 @@ var requestSync = require('sync-request');
 const streamifier = require('streamifier');
 const AWS = require('aws-sdk');
 AWS.config.update({
-	region: 'us-east-1',
-	apiVersion: 'latest',
+	region: env.S3_region,
+	apiVersion: env.S3_apiVersion,
 	credentials: {
-	  accessKeyId: 'AKIAUJ2NC62KT64K7GXW',
-	  secretAccessKey: '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'
+	  accessKeyId: env.S3_accessKeyId,
+	  secretAccessKey: env.S3_secretAccessKey,
 	}
 })
-  
+
 var bodyParser = require('body-parser');
 
 const app = express();
@@ -37,12 +38,12 @@ const PDFDocument = require("pdfkit")
 const SVGtoPDF = require("svg-to-pdfkit")
 const window = require("svgdom")
 const document = window.document
+const constants = require("./constants.json");
 // const SVG = require("svg.js")(window)
 // Add headers before the routes are defined
 
 
 app.use(function (req, res, next) {
-
     // Website you wish to allow to connect
     res.setHeader('Access-Control-Allow-Origin', '*');
     // Request methods you wish to allow
@@ -66,7 +67,6 @@ app.on('ready', () => {
   });
 });
 
-  
 app.use(express.static(path.join(__dirname, 'main')));
 app.use(express.static('files'))
 
@@ -74,7 +74,9 @@ app.use(express.static('files'))
 app.get('/', function(req, res) {
   res.sendFile(path.join(__dirname, '/main/index2.html'));
 });
-
+app.get('/constants.json', function(req, res) {
+	res.send(constants);
+});
 
 app.get('/aws', function(req, res) {
 		s3 = new AWS.S3();
@@ -271,7 +273,7 @@ app.post('/writefile', async function(req, res) {
 						}
 					}
 					// console.log("Upload Success", stored);
-					let returnedB64 =  requestSync('POST', 'http://3.85.107.164/api/v1/sync_batch_files/'+req.body.batchid, {json:data});
+					let returnedB64 =  requestSync('POST', constants.api+'sync_batch_files/'+req.body.batchid, {json:data});
 					// console.log();
 					try {
 						res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));

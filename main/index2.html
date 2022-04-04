@@ -22,7 +22,6 @@
 		<script src="svgparser.js"></script>
 		<script src="deepnest.js"></script>
 		
-
 		<script>
 		// UI-specific stuff in this script
 		function ready(fn){
@@ -33,7 +32,7 @@
 				document.addEventListener('DOMContentLoaded', fn);
 			}
 		}
-		
+		var apiPath = '';
 		// const { ipcRenderer } = require('electron'); 
 		// const fs = require('graceful-fs');
 		// const request = require('request');
@@ -41,17 +40,28 @@
 		// const path = require('path');
 		ready(function(){
 			// main navigation
-			var options = '';
-			var req = fetch('http://3.85.107.164/api/v1/get_batches_to_nest', {
-					method: 'post',
+			
+
+			var req = fetch('./constants.json', {
+					method: 'get',
 					// body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
 				.then(function(data){ 
-					var select = document.getElementById('batchoptions');
-					for (var i=0; i<data.length; i++) {
-						select.options[select.options.length] = new Option('Batch - '+data[i].id, data[i].id);
-					}				
+					apiPath = 	data.api;		
+					var req = fetch(apiPath+'get_batches_to_nest', {
+					method: 'post',
+					// body: fd /* or aFile[0]*/,
+					}).then(function(res){ return res.json(); })
+					.then(function(data){ 
+						var select = document.getElementById('batchoptions');
+						for (var i=0; i<data.length; i++) {
+							select.options[select.options.length] = new Option('Batch - '+data[i].id, data[i].id);
+						}				
+					}); 
 				}); 
+
+
+			
 
 			var tabs = document.querySelectorAll('#sidenav li');
 			
@@ -570,7 +580,7 @@
 				var selecteBatchId = document.getElementById('batchoptions').value;
 				if(selecteBatchId != ''){
 					importPanelsfromApi.className = 'button import  spinner';
-					var req = fetch('http://3.85.107.164/api/v1/get_panels_by_batch/'+selecteBatchId, {
+					var req = fetch(apiPath+'get_panels_by_batch/'+selecteBatchId, {
 					method: 'post',
 					// body: fd /* or aFile[0]*/,
 				}).then(function(res){ return res.json(); })
