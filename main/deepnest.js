@@ -41,7 +41,7 @@
 			populationSize: 10,
 			mutationRate: 10,
 			threads: 4,
-			placementType: 'gravity',
+			placementType: 'box', //box
 			mergeLines: false,  // turn off for colors
 			timeRatio: 0.5,
 			scale: 72,

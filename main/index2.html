@@ -286,7 +286,6 @@
 						
 					// trigger computed dependency chain
 					this.get('getUnits');
-					
 					if(units == 'mm'){
 						return (25.4*(width/conversion)).toFixed(1) + 'mm x ' + (25.4*(height/conversion)).toFixed(1)+'mm';
 					}
@@ -496,6 +495,7 @@
 			});
 			
 			var deleteparts = function(e){
+	
 				for(var i=0; i<DeepNest.parts.length; i++){
 					if(DeepNest.parts[i].selected){
 						for(var j=0; j<DeepNest.parts[i].svgelements.length; j++){
@@ -507,6 +507,30 @@
 						DeepNest.parts.splice(i,1);
 						i--;
 					}
+				}
+				
+				ractive.update('parts');
+				ractive.update('imports');
+				if(DeepNest.imports.length > 0){
+					applyzoom();
+				}
+				
+				resize();
+			}
+
+			var deleteAllparts = function(e){
+	
+				for(var i=0; i<DeepNest.parts.length; i++){
+					// if(DeepNest.parts[i].selected){
+						for(var j=0; j<DeepNest.parts[i].svgelements.length; j++){
+							var node = DeepNest.parts[i].svgelements[j];
+							if (node.parentNode) {
+							node.parentNode.removeChild(node);
+							}
+						}
+						DeepNest.parts.splice(i,1);
+						i--;
+					// }
 				}
 				
 				ractive.update('parts');
@@ -577,6 +601,8 @@
 			
 			var importPanelsfromApi = document.querySelector('#importPanles');
 			importPanelsfromApi.onclick = function(e){
+				// importdelete
+				
 				var selecteBatchId = document.getElementById('batchoptions').value;
 				if(selecteBatchId != ''){
 					importPanelsfromApi.className = 'button import  spinner';
@@ -626,13 +652,21 @@
 							var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 							rect.setAttribute('x',0);
 							rect.setAttribute('y',0);
-							rect.setAttribute('width',1000*conversion);
-							rect.setAttribute('height',1117.6*conversion);
+							rect.setAttribute('width',600*conversion);
+							rect.setAttribute('height',1200*conversion);
 							svg.appendChild(rect);
 							DeepNest.importsvg(null, null, (new XMLSerializer()).serializeToString(svg));
 							DeepNest.parts[DeepNest.parts.length-1].sheet = true;
 							ractive.update('parts');
 							resize();
+							startnest();
+							setTimeout(function(){
+								stop.click();
+								setTimeout(function(){
+									exportAll(1);
+								}, 3000);
+								
+							}, 10000);
 						}	
 						// console.log( data ) 
 					
@@ -1101,7 +1135,7 @@
 						});
 					}
 					DeepNest.reset();
-					deleteCache();
+					// deleteCache();
 					
 					window.nest.update('nests');
 					document.querySelector('#nestdisplay').innerHTML = '';
@@ -1123,6 +1157,10 @@
 
 			var exportall = document.querySelector('#exportAll');
 			exportall.onclick = function(){
+				exportAll();	
+			};
+
+			function exportAll(isAuto=0){
 				var selecteBatchId = document.getElementById('batchoptions').value;
 
 				// var dialog = app.dialog;
@@ -1176,13 +1214,25 @@
 							exportbutton.className = 'button export';
 							response.json().then(function(text) {
 								message(text.message, text.status?0:1);
+								if(typeof text.new_batch != undefined && text.new_batch > 0){
+									var selectx = document.getElementById('batchoptions');
+									var optx = document.createElement('option');
+									optx.value = text.new_batch;
+									optx.innerHTML = 'Batch - '+text.new_batch;
+									selectx.appendChild(optx);
+									selectx.value = text.new_batch;
+									document.querySelector('#back').click();
+									setTimeout(function(){
+										deleteAllparts(); 
+										document.querySelector('#importPanles').click();
+									}, 3000);
+								}
 							})
 						}).catch(function(err) {
 							exportbutton.className = 'button export';
 							message(err, 1);
 						});
-					
-						};
+			}
 			
 			var exportsvg = document.querySelector('#exportsvg');
 			exportsvg.onclick = function(){

@@ -23,9 +23,11 @@ var bodyParser = require('body-parser');
 
 const app = express();
 const fileUpload = require("express-fileupload");
+
+
 app.use(fileUpload());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({limit: '50mb', extended: true}));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // const uuidv4 = require('uuid/v4'); 
 var uuid = require('uuid');
@@ -389,17 +391,19 @@ app.post('/import', (req, res) => {
 app.post('/importfrombatch', (req, res) => {
 	var data = [];
 	var datafiles = [];
-	
+	var identifiers = [];
 	if(Array.isArray(req.body.importFiles)){
 		datafiles = req.body.importFiles;
+		identifiers = req.body.importRef;
 	}else{
 		datafiles.push(req.body.importFiles);
+		identifiers.push(req.body.importRef);
 	}		
 	var promiseArray = [];
 	for(var i = 0; i<datafiles.length; i++){
 
 		var file = datafiles[i];
-		var identifier = req.body.importRef[i];
+		var identifier = identifiers[i];
 		var ext = path.extname(file);
 		var filename = path.basename(file);
 
@@ -508,7 +512,11 @@ function writeFileCust(type, req){
 	
 	if(type=='svg'){
 	  	fileName = fileName+'.svg';
-		fs.writeFileSync('./files/svg/'+fileName, req.body.filedata);
+		let dir = './files/svg/';
+		if (!fs.existsSync(dir)){
+			fs.mkdirSync(dir);
+		}
+		fs.writeFileSync(dir+fileName, req.body.filedata);
 		data = {
 			url:"http://"+req.get('host')+'/svg/'+fileName,
 			filename:fileName
@@ -516,8 +524,12 @@ function writeFileCust(type, req){
 		return data;
 	}else if(type=='pdf'){
 		fileName = fileName+'.pdf';
+		let dir = './files/pdf/';
+		if (!fs.existsSync(dir)){
+			fs.mkdirSync(dir);
+		}
 		const doc = new PDFDocument();
-	  	doc.pipe(fs.createWriteStream('./files/pdf/'+fileName));
+	  	doc.pipe(fs.createWriteStream(dir+fileName));
 		PDFDocument.prototype.addSVG = function(svg, x, y, options) {
 			return SVGtoPDF(this, svg, x, y, options), this;
 		};
@@ -538,7 +550,11 @@ function writeFileCust(type, req){
 					msg = body;
 				}
 				else{
-					fs.writeFileSync('./files/dxf/'+fileName, body);
+					let dir = './files/dxf/';
+					if (!fs.existsSync(dir)){
+						fs.mkdirSync(dir);
+					}
+					fs.writeFileSync(dir+fileName, body);
 					data = {
 						url:"http://"+req.get('host')+'/dxf/'+fileName,
 						filename:fileName
