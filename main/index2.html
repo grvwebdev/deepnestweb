@@ -652,8 +652,8 @@
 							var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 							rect.setAttribute('x',0);
 							rect.setAttribute('y',0);
-							rect.setAttribute('width',600*conversion);
-							rect.setAttribute('height',1200*conversion);
+							rect.setAttribute('width',1200*conversion);
+							rect.setAttribute('height',2400*conversion);
 							svg.appendChild(rect);
 							DeepNest.importsvg(null, null, (new XMLSerializer()).serializeToString(svg));
 							DeepNest.parts[DeepNest.parts.length-1].sheet = true;

@@ -533,7 +533,13 @@ function writeFileCust(type, req){
 		PDFDocument.prototype.addSVG = function(svg, x, y, options) {
 			return SVGtoPDF(this, svg, x, y, options), this;
 		};
-		doc.addSVG(req.body.filedata, 0,0, {width:1000, height:100});
+		let width = 420;
+		let height =  800;
+		doc.addSVG(req.body.filedata, 0,0, {
+			width,
+			height,
+			preserveAspectRatio: `${width}x${height}`,
+		  });
 		doc.end();
 		data = {
 			url:"http://"+req.get('host')+'/pdf/'+fileName,
