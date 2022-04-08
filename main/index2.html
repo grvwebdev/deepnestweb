@@ -602,7 +602,7 @@
 			var importPanelsfromApi = document.querySelector('#importPanles');
 			importPanelsfromApi.onclick = function(e){
 				// importdelete
-				
+				deleteAllparts(); 
 				var selecteBatchId = document.getElementById('batchoptions').value;
 				if(selecteBatchId != ''){
 					importPanelsfromApi.className = 'button import  spinner';
