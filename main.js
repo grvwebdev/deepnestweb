@@ -401,35 +401,41 @@ app.post('/importfrombatch', (req, res) => {
 		identifiers.push(req.body.importRef);
 	}		
 	var promiseArray = [];
-	for(var i = 0; i<datafiles.length; i++){
+	try {
+		for(var i = 0; i<datafiles.length; i++){
 
-		var file = datafiles[i];
-		var identifier = identifiers[i];
-		var ext = path.extname(file);
-		var filename = path.basename(file);
+			var file = datafiles[i];
+			var identifier = identifiers[i];
+			var ext = path.extname(file);
+			var filename = path.basename(file);
+	
+			if(ext.toLowerCase() == '.svg'){
+				var filename = uuid.v4()+ext;
+				filePath = __dirname+'/files/'+filename;
+				let returnedB64 =  requestSync('GET', file);
+				let bufferData = returnedB64.getBody();
+				let stringData = bufferData.toString();
+				// fileStr = file.data.toString('utf8');
+				fs.writeFileSync(filePath, stringData);
+				// console.log(); return;
+				// readFileData = readFile(filePath);
+				// var fdata =  {data:readFileData.fileStr, name:file.name, dirpath:readFileData.dirpath, scalingFactor:null }
+	
+				// var file = fs.readFileSync(filePath, 'utf8');
+				// console.log(file);
+				// readFileData =  {dirpath:filePath, fileStr:file.toString()};
+				var fdata =  {data:stringData, name:filename, dirpath:__dirname+'/files/', scalingFactor:null, identifier:identifier }
+				data.push(fdata);
+			}else{
+				//svg is supported for now
+			}
+	
+		}	
+	} catch (err) {
 
-		if(ext.toLowerCase() == '.svg'){
-			var filename = uuid.v4()+ext;
-			filePath = __dirname+'/files/'+filename;
-			let returnedB64 =  requestSync('GET', file);
-			let bufferData = returnedB64.getBody();
-			let stringData = bufferData.toString();
-			// fileStr = file.data.toString('utf8');
-			fs.writeFileSync(filePath, stringData);
-			// console.log(); return;
-			// readFileData = readFile(filePath);
-			// var fdata =  {data:readFileData.fileStr, name:file.name, dirpath:readFileData.dirpath, scalingFactor:null }
-
-			// var file = fs.readFileSync(filePath, 'utf8');
-			// console.log(file);
-			// readFileData =  {dirpath:filePath, fileStr:file.toString()};
-			var fdata =  {data:stringData, name:filename, dirpath:__dirname+'/files/', scalingFactor:null, identifier:identifier }
-			data.push(fdata);
-		}else{
-			//svg is supported for now
-		}
-
-	}	
+		res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
+	}
+	
 	res.end(JSON.stringify(data));
 });
 function processFile(file){
