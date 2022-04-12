@@ -638,7 +638,6 @@
 					body: fd /* or aFile[0]*/,
 					}).then(function(res){ return res.json(); })
 					.then(function(data){ 
-						importbutton.className = 'button import';
 						if(Array.isArray(data)){
 							for(var i = 0; i<data.length; i++){
 								importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor, null, data[i].identifier);
@@ -659,6 +658,7 @@
 							DeepNest.parts[DeepNest.parts.length-1].sheet = true;
 							ractive.update('parts');
 							resize();
+							importPanelsfromApi.className = 'button btn-sm';
 							startnest();
 							setTimeout(function(){
 								stop.click();
@@ -671,9 +671,7 @@
 						// console.log( data ) 
 					
 					}); // returns a promise
-
-
-					importPanelsfromApi.className = 'button btn-sm';				
+					// importPanelsfromApi.className = 'button btn-sm';				
 				}); 
 
 				}else{
