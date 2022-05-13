@@ -599,6 +599,10 @@
 			// var app = electron.remote; 
 			// var fs = require('fs');
 			
+			
+
+			
+
 			var importPanelsfromApi = document.querySelector('#importPanles');
 			importPanelsfromApi.onclick = function(e){
 				// importdelete
@@ -661,16 +665,7 @@
 							resize();
 							importPanelsfromApi.className = 'button btn-sm';
 							startnest();
-							setTimeout(function(){
-								if(DeepNest.nests.length > 0){
-									setTimeout(function(){
-										stop.click();
-								        setTimeout(function(){
-									        exportAll(1);
-								        }, 3000);
-								    }, 5000);
-								}
-							}, 1000);
+							checkNestCompleted();
 						}	
 						// console.log( data ) 
 					
@@ -1100,6 +1095,8 @@
 			document.querySelector('#startnest').onclick = startnest;
 			
 			var stop = document.querySelector('#stopnest');
+
+			
 			stop.onclick = function(e){
 				if(stop.className == 'button stop'){
 					// ipcRenderer.send('background-stop');
@@ -1123,7 +1120,24 @@
 					startnest();
 				}
 			}
-			
+			var settimeoutint = null;
+			function checkNestCompleted(){
+                // do whatever you like here
+				if(DeepNest.nests.length > 0){
+					setTimeout(function(){
+					stop.click();
+					// setTimeout(function(){
+						setTimeout(function(){
+							// console.log('exportall', DeepNest.nests.length)
+						    exportAll(1);
+						}, 3000);
+					// }, 5000);
+				}, 5000);
+					return;
+				}
+				settimeoutint = setTimeout(checkNestCompleted, 1000);
+            } 
+
 			var back = document.querySelector('#back');
 			back.onclick = function(e){
 						

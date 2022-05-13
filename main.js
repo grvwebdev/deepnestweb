@@ -213,8 +213,16 @@ app.post('/writefile', async function(req, res) {
 		});
 		
 	}else if(req.body.type=='exportall'){
-		svgdata = writeFileCust('svg', req)
-		pdfdata = writeFileCust('pdf', req)
+		var fileName = uuid.v4();
+		if(typeof req.body.skuname != 'undefined' && req.body.skuname != null){
+			var tm = new Date().toLocaleString("sv-SE", {timeZone:
+				"Asia/Kolkata"});
+			fileName = req.body.skuname+'_'+tm;
+			fileName = fileName.replace(/ /g, "_");
+            fileName = fileName.replace(/:/g, "-");
+		}
+		svgdata = writeFileCust('svg', req, fileName)
+		pdfdata = writeFileCust('pdf', req, fileName)
 	
 		
 		// var uploadParams = {Bucket: 'jitorder-dev', Key: '', Body: ''};
@@ -225,7 +233,7 @@ app.post('/writefile', async function(req, res) {
 		uploadParams = [];
 	
 
-		var fileName = uuid.v4();
+		
 		fileName = fileName+'.dxf';
 		var postreq =  request.post('http://convert.deepnest.io', async function (err, resp, body) {
 			if (err) {
@@ -517,11 +525,12 @@ function readFile(file){
 function writeFileCust(type, req){
 	var fileName = uuid.v4();
 	if(typeof req.body.skuname != 'undefined' && req.body.skuname != null){
-		let tm = new Date().toLocaleString("sv-SE", {timeZone:
+		var tm = new Date().toLocaleString("sv-SE", {timeZone:
 			"Asia/Kolkata"});
-		var fileName = req.body.skuname+' '+tm;
+		fileName = req.body.skuname+'_'+tm;
+		fileName = fileName.replace(/ /g, "_");
+		fileName = fileName.replace(/:/g, "-");
 	}
-	
 	if(type=='svg'){
 	  	fileName = fileName+'.svg';
 		let dir = './files/svg/';
