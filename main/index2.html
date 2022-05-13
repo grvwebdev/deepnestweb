@@ -662,12 +662,15 @@
 							importPanelsfromApi.className = 'button btn-sm';
 							startnest();
 							setTimeout(function(){
-								stop.click();
-								setTimeout(function(){
-									exportAll(1);
-								}, 3000);
-								
-							}, 10000);
+								if(DeepNest.nests.length > 0){
+									setTimeout(function(){
+										stop.click();
+								        setTimeout(function(){
+									        exportAll(1);
+								        }, 3000);
+								    }, 5000);
+								}
+							}, 1000);
 						}	
 						// console.log( data ) 
 					
