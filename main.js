@@ -516,6 +516,11 @@ function readFile(file){
 
 function writeFileCust(type, req){
 	var fileName = uuid.v4();
+	if(typeof req.body.skuname != 'undefined' && req.body.skuname != null){
+		let tm = new Date().toLocaleString("sv-SE", {timeZone:
+			"Asia/Kolkata"});
+		var fileName = req.body.skuname+' '+tm;
+	}
 	
 	if(type=='svg'){
 	  	fileName = fileName+'.svg';
