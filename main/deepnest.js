@@ -36,12 +36,12 @@
 		var config = {
 			clipperScale: 10000000,
 			curveTolerance: 0.72, 
-			spacing: 0,
-			rotations: 4,
+			spacing: 2,
+			rotations: 2,
 			populationSize: 10,
 			mutationRate: 10,
 			threads: 4,
-			placementType: 'box', //box
+			placementType: 'gravity', //box
 			mergeLines: false,  // turn off for colors
 			timeRatio: 0.5,
 			scale: 72,
@@ -50,7 +50,8 @@
 			dxfImportScale: "1",
 			dxfExportScale: "72",
 			endpointTolerance: 0.36,
-			conversionServer: 'http://convert.deepnest.io'
+			conversionServer: 'http://convert.deepnest.io',
+			useHoles: false,
 		};
 
 		this.defaultConfig = config;

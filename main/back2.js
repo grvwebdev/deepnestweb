@@ -1103,7 +1103,7 @@ async function placeParts(sheets, parts, config, nestindex){
 						
 						// weigh width more, to help compress in direction of gravity
 						if(config.placementType == 'gravity'){
-							area = rectbounds.width*2 + rectbounds.height;
+							area = rectbounds.width + rectbounds.height*2;
 						}
 						else{
 							area = rectbounds.width * rectbounds.height;
