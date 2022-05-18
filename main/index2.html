@@ -655,6 +655,11 @@
 					body: fd /* or aFile[0]*/,
 					}).then(function(res){ return res.json(); })
 					.then(function(data){ 
+						if(data.status == 0){
+							message(data.message, true);
+							importPanelsfromApi.className = 'button btn-sm';
+							return;
+						}
 						if(Array.isArray(data)){
 							for(var i = 0; i<data.length; i++){
 								importData(data[i].data, data[i].name, data[i].dirpath, data[i].scalingFactor, null, data[i].identifier);

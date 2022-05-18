@@ -440,7 +440,6 @@ app.post('/importfrombatch', (req, res) => {
 	
 		}	
 	} catch (err) {
-
 		res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
 	}
 	
