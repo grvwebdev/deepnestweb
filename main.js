@@ -179,6 +179,9 @@ app.post('/calculatenfp', function(req, res) {
 });
 
 app.post('/writefile', async function(req, res) {	
+
+		try {
+						
 	if(req.body.type=='svg'){
 	  	data = writeFileCust('svg', req)
 		res.end(JSON.stringify(data));
@@ -303,6 +306,13 @@ app.post('/writefile', async function(req, res) {
 		});
 		
 	}
+
+
+	} catch (e) {	
+		console.log(e);
+		res.end(JSON.stringify({'status':0, 'message':'Server Error'}));
+	}
+
 });
 
 function upload(array) {
