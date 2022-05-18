@@ -252,7 +252,7 @@ app.post('/writefile', async function(req, res) {
 						filename:fileName
 					};
 					
-					data = {
+					var sendData = {
 						batch_id:req.body.batchid,
 						batch_data:req.body.batchData
 					}
@@ -279,7 +279,7 @@ app.post('/writefile', async function(req, res) {
 						};
 						try {
 							const stored = await s3.upload(params).promise()
-							data[file.type] = {'type' : file.type, 'url':stored.Location};
+							sendData[file.type] = {'type' : file.type, 'url':stored.Location};
 							// data[file.type] = {'type' : file.type, 'url':'stored.Location'};
 						} catch (err) {
 
@@ -287,8 +287,7 @@ app.post('/writefile', async function(req, res) {
 						}
 					}
 					// console.log("Upload Success", stored);
-					let returnedB64 =  requestSync('POST', constants.api+'sync_batch_files/'+req.body.batchid, {json:data});
-					// console.log();
+					let returnedB64 =  requestSync('POST', constants.api+'sync_batch_files/'+req.body.batchid, {json:sendData});
 					try {
 						res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
 					  } catch (e) {	
