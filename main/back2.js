@@ -141,7 +141,7 @@ onmessage = function(e){
 	if(e.data.process != 'background-start'){
 		return;
 	}
-
+	window.nfpcache = {};
 	var data = e.data;
 	var index = data.index;
     var individual = data.individual;
