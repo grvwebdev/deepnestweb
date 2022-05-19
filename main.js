@@ -210,7 +210,7 @@ app.post('/writefile', async function(req, res) {
 		});
 		var form = postreq.form();
 		form.append('format', 'dxf');
-		form.append('fileUpload', req.body.filedata, {
+		form.append('fileUpload', req.body.dxfFileData, {
 		  filename: 'deepnest.svg',
 		  contentType: 'image/svg+xml'
 		});
@@ -299,7 +299,7 @@ app.post('/writefile', async function(req, res) {
 		});
 		var form = postreq.form();
 		form.append('format', 'dxf');
-		form.append('fileUpload', req.body.filedata, {
+		form.append('fileUpload', req.body.dxfFileData, {
 		  filename: 'deepnest.svg',
 		  contentType: 'image/svg+xml'
 		});
@@ -600,7 +600,7 @@ function writeFileCust(type, req){
 		});
 		var form = postreq.form();
 		form.append('format', 'dxf');
-		form.append('fileUpload', req.body.filedata, {
+		form.append('fileUpload', req.body.dxfFileData, {
 		  filename: 'deepnest.svg',
 		  contentType: 'image/svg+xml'
 		});

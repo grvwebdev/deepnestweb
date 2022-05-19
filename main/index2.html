@@ -1234,6 +1234,7 @@
 
 						exportbutton.className = 'button export spinner';
 						var fileData = exportNest(selectedBatch);
+						var dxfFileData = exportNest(selectedBatch, true);
 						var myHeaders = new Headers();
 						myHeaders.append('Content-Type', 'text/html');
 						
@@ -1242,7 +1243,7 @@
 							headers: {
 								"Content-Type": "application/json; charset=utf-8"
 							},
-							body: JSON.stringify({filedata:fileData,type:'exportall', batchid:selecteBatchId, batchData:batchData,skuname:skuname}, null, 2 )
+							body: JSON.stringify({filedata:fileData,dxfFileData:dxfFileData,type:'exportall', batchid:selecteBatchId, batchData:batchData,skuname:skuname}, null, 2 )
 						}).then(function(response) {
 							exportbutton.className = 'button export';
 							response.json().then(function(text) {
