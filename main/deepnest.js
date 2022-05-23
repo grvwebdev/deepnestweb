@@ -48,7 +48,7 @@
 			simplify: false,  
 			units: 'mm',
 			dxfImportScale: "1",
-			dxfExportScale: "72",
+			dxfExportScale: "25.4",
 			endpointTolerance: 0.36,
 			conversionServer: 'http://convert.deepnest.io',
 			useHoles: false,
