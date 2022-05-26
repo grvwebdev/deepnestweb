@@ -1036,43 +1036,45 @@
 					//progressCallback(progress);
 				}, 100);
 			}
-		}
-		
-		const worker = this.worker = new Worker("./back2.js");
+			this.worker = new Worker("./back2.js");
 
-		// w.onmessage = function(event){
-//     console.log(event.data) ;
-// };
-		
-		// ipcRenderer.on('background-response', (event, payload) => {
-		worker.onmessage = function(event){
-			
-			if(event.data.process == 'background-response'){
-				var payload = event.data.placement;
-				console.log(payload);
-				if(!GA){
-					// user might have quit while we're away
-					return;
-				}
-				GA.population[payload.index].processing = false;
-				GA.population[payload.index].fitness = payload.fitness;
-				
-				// render placement
-				// console.log(self.nests);
-				if(self.nests.length == 0 || self.nests[0].fitness > payload.fitness ){
-					self.nests.unshift(payload);
-					if(self.nests.length > 10){
-						self.nests.pop();
+			// w.onmessage = function(event){
+			//     console.log(event.data) ;
+			// };
+					
+					// ipcRenderer.on('background-response', (event, payload) => {
+					this.worker.onmessage = function(event){
+						
+						if(event.data.process == 'background-response'){
+							var payload = event.data.placement;
+							console.log(payload);
+							if(!GA){
+								// user might have quit while we're away
+								return;
+							}
+							GA.population[payload.index].processing = false;
+							GA.population[payload.index].fitness = payload.fitness;
+							
+							// render placement
+							// console.log(self.nests);
+							if(self.nests.length == 0 || self.nests[0].fitness > payload.fitness ){
+								self.nests.unshift(payload);
+								if(self.nests.length > 10){
+									self.nests.pop();
+								}
+								if(displayCallback){
+									displayCallback();
+								}
+							}
+						}else if(event.data.process == 'background-progress'){
+							var bar = document.querySelector('#progressbar');
+							bar.setAttribute('style', 'width: '+parseInt(event.data.progress*100)+'%'+(event.data.progress < 0.01 ? '; transition: none' : ''));
+						}
 					}
-					if(displayCallback){
-						displayCallback();
-					}
-				}
-			}else if(event.data.process == 'background-progress'){
-				var bar = document.querySelector('#progressbar');
-				bar.setAttribute('style', 'width: '+parseInt(event.data.progress*100)+'%'+(event.data.progress < 0.01 ? '; transition: none' : ''));
-			}
 		}
+	
+
+		
 		
 		
 
@@ -1190,7 +1192,7 @@
 					var mobj = {process:'background-start', index: i, sheets: sheets, sheetids: sheetids, sheetsources: sheetsources, sheetchildren: sheetchildren, individual: GA.population[i], config: config, ids: ids, sources: sources, children: children};
 					// mainWindow.webContents.send('background-start', mobj);
 					// ipcRenderer.send('background-start', mobj);
-					worker.postMessage(mobj);
+					this.worker.postMessage(mobj);
 					running++;					
 				}
 			}
@@ -1349,6 +1351,7 @@
 		
 		this.stop = function(){
 			this.working = false;
+			this.worker.terminate();
 			if(GA && GA.population && GA.population.length > 0){
 				GA.population.forEach(function(i){
 					i.processing = false;
