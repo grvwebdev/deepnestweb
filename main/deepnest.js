@@ -36,7 +36,7 @@
 		var config = {
 			clipperScale: 10000000,
 			curveTolerance: 0.72, 
-			spacing: 2,
+			spacing: 8, // giving 3 mm spacing on value 8
 			rotations: 2,
 			populationSize: 10,
 			mutationRate: 10,
