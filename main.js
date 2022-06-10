@@ -286,7 +286,22 @@ app.post('/writefile', async function(req, res) {
 							res.end(JSON.stringify({'status':0, 'message':'unable to upload files nested files.'}));
 						}
 					}
-					// console.log("Upload Success", stored);
+					fs.unlink(svg, (error) => {
+						// console.log(error);
+					}); 
+					fs.unlink(pdf, (error) => {
+						// console.log(error);
+					});
+					fs.unlink(dxf, (error) => {
+						// console.log(error);
+					});
+					fs.readdirSync('./files/').forEach(file => {
+						if(!['svg', 'dxf', 'pdf', null, 'null'].includes(file)){
+							fs.unlink('./files/'+file, (error) => {
+								// console.log(error);
+							});
+						}
+					});
 					let returnedB64 =  requestSync('POST', constants.api+'sync_batch_files/'+req.body.batchid, {json:sendData});
 					try {
 						res.end(JSON.stringify(JSON.parse(returnedB64.getBody('utf8'))));
