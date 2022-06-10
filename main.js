@@ -425,6 +425,7 @@ app.post('/importfrombatch', (req, res) => {
 	var data = [];
 	var datafiles = [];
 	var identifiers = [];
+	try {
 	if(Array.isArray(req.body.importFiles)){
 		datafiles = req.body.importFiles;
 		identifiers = req.body.importRef;
@@ -433,7 +434,7 @@ app.post('/importfrombatch', (req, res) => {
 		identifiers.push(req.body.importRef);
 	}		
 	var promiseArray = [];
-	try {
+	
 		for(var i = 0; i<datafiles.length; i++){
 
 			var file = datafiles[i];
