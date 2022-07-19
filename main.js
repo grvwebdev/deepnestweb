@@ -465,10 +465,14 @@ app.post('/importfrombatch', (req, res) => {
 	
 		}	
 	} catch (err) {
-		res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
+		return res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
+	}
+	if(data.length > 0){
+		res.end(JSON.stringify(data));
+	}else{
+		return res.end(JSON.stringify({'status':0, 'message':'No files were processed.'}));
 	}
 	
-	res.end(JSON.stringify(data));
 });
 function processFile(file){
 	var ext = path.extname(file.name);
