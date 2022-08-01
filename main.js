@@ -11,6 +11,7 @@ const url = require('url')
 var requestSync = require('sync-request');
 const streamifier = require('streamifier');
 const AWS = require('aws-sdk');
+const dxfHelper  = require('dxf'); 
 AWS.config.update({
 	region: env.S3_region,
 	apiVersion: env.S3_apiVersion,
@@ -224,19 +225,11 @@ app.post('/writefile', async function(req, res) {
 			fileName = fileName.replace(/ /g, "_");
             fileName = fileName.replace(/:/g, "-");
 		}
-		svgdata = writeFileCust('svg', req, fileName)
-		pdfdata = writeFileCust('pdf', req, fileName)
-	
 		
 		// var uploadParams = {Bucket: 'jitorder-dev', Key: '', Body: ''};
 		var fs = require('fs');
-
-		
 		s3 = new AWS.S3();
-		uploadParams = [];
-	
-
-		
+		uploadParams = [];		
 		fileName = fileName+'.dxf';
 		var postreq =  request.post('http://convert.deepnest.io', async function (err, resp, body) {
 			if (err) {
@@ -257,18 +250,26 @@ app.post('/writefile', async function(req, res) {
 						batch_data:req.body.batchData
 					}
 
-					var svg = './files/svg/'+svgdata.filename;
-					var svgStream = fs.createReadStream(svg);
-					uploadParams.push({'body':svgStream, 'id':path.basename(svg), 'type':'svg'});
-			
-					var pdf = './files/pdf/'+pdfdata.filename;
-					var pdfStream = fs.createReadStream(pdf);
-					uploadParams.push({'body':pdfStream, 'id':path.basename(pdf), 'type':'pdf'});
-
 					var dxf = './files/dxf/'+dxfdata.filename;
+					var dxfString  = fs.readFileSync(dxf, 'utf8');
+					var parsed = dxfHelper.parseString(dxfString);
+					fileData = dxfHelper.toSVG(parsed);
+					req.body.filedata = fileData;					
 					var dxfStream = fs.createReadStream(dxf);
 					uploadParams.push({'body':dxfStream, 'id':path.basename(dxf), 'type':'dxf'});
 			
+
+					var svgdata = writeFileCust('svg', req, fileName)
+					var svg = './files/svg/'+svgdata.filename;
+					var svgStream = fs.createReadStream(svg);
+					uploadParams.push({'body':svgStream, 'id':path.basename(svg), 'type':'svg'});
+					
+
+					pdfdata = writeFileCust('pdf', req, fileName)
+					var pdf = './files/pdf/'+pdfdata.filename;
+					var pdfStream = fs.createReadStream(pdf);
+					uploadParams.push({'body':pdfStream, 'id':path.basename(pdf), 'type':'pdf'});
+					
 					var mfiles = [{batch_id:req.body.batchid}];
 					for (const file of uploadParams) {
 						const params = {
