@@ -599,10 +599,7 @@
 			// var app = electron.remote; 
 			// var fs = require('fs');
 			
-			
-
-			
-
+			var engraving_color = '';
 			var importPanelsfromApi = document.querySelector('#importPanles');
 			importPanelsfromApi.onclick = function(e){
 				// importdelete
@@ -621,6 +618,7 @@
 						return;
 					}
 					var sheetWidth = parseFloat(data.sheet_width);
+					engraving_color = data.engraving_color;
 					skuname = data.fabric_sku;
 					sheetWidth = isNaN(sheetWidth)?0:sheetWidth;
 					if(sheetWidth == 0){
@@ -1231,13 +1229,11 @@
 							});
 						});
 						batchData.placedPanels = placedPanels;
-
 						exportbutton.className = 'button export spinner';
-						var fileData = exportNest(selectedBatch);
-						var dxfFileData = exportNest(selectedBatch, true);
+						var fileData = exportNest(selectedBatch, false, selecteBatchId);
+						var dxfFileData = exportNest(selectedBatch, true, selecteBatchId);
 						var myHeaders = new Headers();
 						myHeaders.append('Content-Type', 'text/html');
-						
 						fetch('/writefile',{
 							method: "POST",
 							headers: {
@@ -1461,7 +1457,7 @@
 			
 			// nest save
 			
-			var exportNest = function(n, dxf){
+			var exportNest = function(n, dxf, batchId){
 			
 				var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 				
@@ -1524,10 +1520,22 @@
 					scale /= 25.4;
 				}
 				
+
+				var batchidspacing =  svgheight/10;
+				var batchidspacingStart =  svgheight+batchidspacing+(batchidspacing/4);
+				var second = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+				var secondContent = document.createTextNode(batchId);
+				second.appendChild(secondContent);
+				second.setAttribute('fill', engraving_color);
+				second.setAttribute('x', '1');
+				second.setAttribute('y', batchidspacingStart);
+				second.setAttribute('font-size', '160');
+				svg.appendChild(second);
+				svgheight += batchidspacing;
+				
 				svg.setAttribute('width', (svgwidth/scale) + (units == 'inch' ? 'in' : 'mm'));
 				svg.setAttribute('height', (svgheight/scale) + (units == 'inch' ? 'in' : 'mm'));
 				svg.setAttribute('viewBox', '0 0 '+svgwidth+' '+svgheight);
-				
 				if(defaultconfig.mergeLines && n.mergedLength > 0){
 					SvgParser.applyTransform(svg);
 					SvgParser.flatten(svg);

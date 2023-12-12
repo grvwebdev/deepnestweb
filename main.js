@@ -114,7 +114,7 @@ function addSheet(width, height, count) {
 	rect.setAttribute('x', 0);
 	rect.setAttribute('y', 0);
 	rect.setAttribute('width', width * conversion);
-	rect.setAttribute('height', height * conversion);
+	rect.setAttribute('height', height * conversion); 
 	svg.appendChild(rect);
 	DeepNest.importsvg(null, null, (new XMLSerializer()).serializeToString(svg));
 
@@ -244,7 +244,7 @@ app.post('/writefile', async function(req, res) {
 						url:"http://"+req.get('host')+'/dxf/'+fileName,
 						filename:fileName
 					};
-					
+					// res.end(JSON.stringify({'status':0, 'message':'Server Error'}));
 					var sendData = {
 						batch_id:req.body.batchid,
 						batch_data:req.body.batchData
@@ -466,6 +466,7 @@ app.post('/importfrombatch', (req, res) => {
 	
 		}	
 	} catch (err) {
+		// console.log(err, true);
 		return res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
 	}
 	if(data.length > 0){
@@ -584,12 +585,15 @@ function writeFileCust(type, req){
 			return SVGtoPDF(this, svg, x, y, options), this;
 		};
 		let width = 420;
-		let height =  800;
-		doc.addSVG(req.body.filedata, 0,0, {
+		let height =  750;
+		doc.addSVG(req.body.filedata, 0,40, {
 			width,
 			height,
 			preserveAspectRatio: `${width}x${height}`,
-		  });
+		});
+		 
+		doc.fontSize(18).text('Batch Id: '+req.body.batchid, 20, 20);
+
 		doc.end();
 		data = {
 			url:"http://"+req.get('host')+'/pdf/'+fileName,
