@@ -283,8 +283,8 @@ app.post('/writefile', async function(req, res) {
 							sendData[file.type] = {'type' : file.type, 'url':stored.Location};
 							// data[file.type] = {'type' : file.type, 'url':'stored.Location'};
 						} catch (err) {
-
-							res.end(JSON.stringify({'status':0, 'message':'unable to upload files nested files.'}));
+							// console.log(err);
+							res.end(JSON.stringify({'status':0, 'message':'unable to upload nested files.'}));
 						}
 					}
 					fs.unlink(svg, (error) => {
@@ -470,7 +470,7 @@ app.post('/importfrombatch', (req, res) => {
 		return res.end(JSON.stringify({'status':0, 'message':'unable to process files.'}));
 	}
 	if(data.length > 0){
-		res.end(JSON.stringify(data));
+		return res.end(JSON.stringify(data));
 	}else{
 		return res.end(JSON.stringify({'status':0, 'message':'No files were processed.'}));
 	}
