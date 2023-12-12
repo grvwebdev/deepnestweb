@@ -26,8 +26,7 @@
   "devDependencies": {
     "electron": "^1.8.8",
     "electron-builder": "^20.26.0",
-    "electron-rebuild": "^1.4.0",
-    "nodemon": "^3.0.1"
+    "electron-rebuild": "^1.4.0"
   },
   "dependencies": {
     "async": "^3.2.2",
